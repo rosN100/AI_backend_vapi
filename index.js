@@ -76,11 +76,7 @@ function validateConfiguration() {
 // ------------------------------------------------------------
 function createUltravoxCall(voice) {
   const callConfig = {
-    systemPrompt: SYSTEM_PROMPT,
-    model: 'fixie-ai/ultravox',
-    voice,
-    temperature: 0.3,
-    firstSpeakerSettings: { user: {} },
+    agent_id: agentId,
     medium: { twilio: {} }
   };
 
