@@ -1,92 +1,64 @@
-# Ultravox Twilio Outbound Call Quickstart
+# Ultravox Twilio Outbound Call API
 
-This Node.js application demonstrates how to make outbound phone calls using Ultravox AI and Twilio. It sets up an AI-powered phone call where the AI agent (named Steve) will interact with the call recipient.
+This project exposes a simple Express server that integrates Ultravox AI with Twilio to place outbound phone calls. It is designed to work with an n8n workflow and provides two REST endpoints.
 
-## Prerequisites
+## Endpoints
 
-- Node.js (v18 or higher)
-- An Ultravox API key
-- A Twilio account with:
-  - Account SID
-  - Auth Token
-  - A phone number
+| Method | Endpoint          | Description                                               |
+| ------ | ----------------- | --------------------------------------------------------- |
+| POST   | `/trigger-call`   | Receive candidate data from n8n and initiate the call.    |
+| POST   | `/post-call-results` | Receive call results and forward them to the n8n workflow. |
 
 ## Setup
 
-1. Clone this repository
 1. Install dependencies:
-  ```bash
-  pnpm install
-  ```
+   ```bash
+   npm install
+   ```
+2. Copy `.env.example` to `.env` and fill in your credentials.
+3. Start the server:
+   ```bash
+   npm start
+   ```
 
-  or
-  ```bash
-  npm install
-  ```
+The server validates incoming payloads using **Joi** and reuses the existing Ultravox call logic.
 
-1. Configure your environment:
-   Open `index.js` and update the following constants with your credentials:
+## Environment Variables
 
-  ```javascript
-  // ------------------------------------------------------------
-  // Step 1:  Configure Twilio account and destination number
-  // ------------------------------------------------------------
-  const TWILIO_ACCOUNT_SID = 'your_twilio_account_sid_here';
-  const TWILIO_AUTH_TOKEN = 'your_twilio_auth_token_here';
-  const TWILIO_PHONE_NUMBER = 'your_twilio_phone_number_here';
-  const DESTINATION_PHONE_NUMBER = 'the_destination_phone_number_here';
+See `.env.example` for all required variables:
 
-  // ------------------------------------------------------------
-  // Step 2:  Configure Ultravox API key
-  //
-  // Optional: Modify the system prompt
-  // ------------------------------------------------------------
-  const ULTRAVOX_API_KEY = 'your_ultravox_api_key_here';
-  const SYSTEM_PROMPT = 'Your name is Steve and you are calling a person on the phone. Ask them their name and see how they are doing.';
-  ```
+- `TWILIO_ACCOUNT_SID` / `TWILIO_AUTH_TOKEN` – Twilio credentials
+- `TWILIO_PHONE_NUMBER` – Twilio phone number used to place calls
+- `ULTRAVOX_API_KEY` – Ultravox API key
+- `N8N_RESULTS_URL` – n8n webhook to receive post‑call results
 
-## Running the Application
+## Usage
 
-Start the application using either:
-  ```bash
-  pnpm start
-  ```
+Send a POST request to `/trigger-call` with a JSON body:
 
-  or 
+```json
+{
+  "candidateId": "string",
+  "candidateName": "string",
+  "candidatePhone": "string",
+  "candidateGender": "string",
+  "voice": "string"
+}
+```
 
-  ```bash
-  npm start
-  ```
+After the call completes, post the results to `/post-call-results`:
 
-The application will:
-1. Create an Ultravox call session
-1. Initiate a phone call through Twilio
-1. Connect the AI agent to the call
+```json
+{
+  "candidateId": "string",
+  "callStatus": "string",
+  "candidateResponse": "string",
+  "scheduledTime": "string",
+  "followUpRequired": true,
+  "callRecordingUrl": "string",
+  "transcript": "string"
+}
+```
 
-## Console Output
+The server will forward these results to the `N8N_RESULTS_URL`.
 
-When running successfully, you should see something like:
-  ```bash
-  🚀 Starting Outbound Ultravox Voice AI Phone Call...
-
-  ✅ Configuration validation passed!
-  📞 Creating Ultravox call...
-  ✅ Got Ultravox joinUrl: wss://prod-voice-pgaenaxiea-uc.a.run.app/calls/ULTRAVOX_CALL_ID/telephony
-  📱 Initiating Twilio call...
-  🎉 Twilio outbound phone call initiated successfully!
-  📋 Twilio Call SID: CA3b...
-  📞 Calling +12065551212 from +18005551212
-  ```
-
-## Troubleshooting
-
-If you encounter errors:
-1. Verify all API keys and credentials are correct
-1. Ensure the destination phone number is in a valid format (e.g., +1234567890)
-1. Check that your Twilio number is capable of making outbound calls
-
-## Project Structure
-
-- `index.js` - Main application file containing the call logic
-- `package.json` - Project dependencies and scripts
-- `README.md` - This documentation file
