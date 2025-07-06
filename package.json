@@ -1,0 +1,13 @@
+{
+  "name": "twilio-outbound-quickstart-js",
+  "private": true,
+  "version": "0.0.1",
+  "type": "module",
+  "scripts": {
+    "start": "node index.js"
+  },
+  "dependencies": {
+    "dotenv": "^17.0.1",
+    "twilio": "^5.4.0"
+  }
+}
