@@ -24,12 +24,12 @@ app.use(express.json());
 // ------------------------------------------------------------
 // Validation schemas
 // ------------------------------------------------------------
-const triggerSchema = Joi.object({
+const callSchema = Joi.object({
   candidateId: Joi.string().required(),
   candidateName: Joi.string().required(),
   candidatePhone: Joi.string().required(),
   candidateGender: Joi.string().required(),
-  agentId: Joi.string().required()
+  voice: Joi.string().required()
 });
 
 const resultsSchema = Joi.object({
@@ -74,9 +74,9 @@ function validateConfiguration() {
 // ------------------------------------------------------------
 // Ultravox call creation
 // ------------------------------------------------------------
-function createUltravoxCall(agentId) {
+function createUltravoxCall(voice) {
   const callConfig = {
-    agent_id: agentId,
+    voice: voice,
     medium: { twilio: {} }
   };
 
@@ -113,7 +113,7 @@ function createUltravoxCall(agentId) {
 
 async function triggerUltraVoxCall(data) {
   console.log('📞 Creating Ultravox call...');
-  const uv = await createUltravoxCall(data.agentId);
+  const uv = await createUltravoxCall(data.voice);
   console.log('✅ Got Ultravox joinUrl:', uv.joinUrl);
 
   console.log('📱 Initiating Twilio call...');
