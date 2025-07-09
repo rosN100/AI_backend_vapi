@@ -16,7 +16,7 @@ const {
   N8N_RESULTS_URL
 } = process.env;
 
-const SYSTEM_PROMPT = 'Your name is Steve and you are calling a person on the phone. Ask them their name and see how they are doing.';
+// const SYSTEM_PROMPT = 'Your name is Steve and you are calling a person on the phone. Ask them their name and see how they are doing.';
 
 const app = express();
 app.use(express.json());
@@ -29,7 +29,7 @@ const triggerSchema = Joi.object({
   candidateName: Joi.string().required(),
   candidatePhone: Joi.string().required(),
   candidateGender: Joi.string().required(),
-  voice: Joi.string().required()
+  agentId: Joi.string().required()
 });
 
 const resultsSchema = Joi.object({
@@ -74,7 +74,7 @@ function validateConfiguration() {
 // ------------------------------------------------------------
 // Ultravox call creation
 // ------------------------------------------------------------
-function createUltravoxCall(voice) {
+function createUltravoxCall(agentId) {
   const callConfig = {
     agent_id: agentId,
     medium: { twilio: {} }
@@ -113,7 +113,7 @@ function createUltravoxCall(voice) {
 
 async function triggerUltraVoxCall(data) {
   console.log('📞 Creating Ultravox call...');
-  const uv = await createUltravoxCall(data.voice);
+  const uv = await createUltravoxCall(data.agentId);
   console.log('✅ Got Ultravox joinUrl:', uv.joinUrl);
 
   console.log('📱 Initiating Twilio call...');
