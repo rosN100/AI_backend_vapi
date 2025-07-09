@@ -154,8 +154,15 @@ async function postResultsToN8n(results) {
 // Express Endpoints
 // ------------------------------------------------------------
 app.post('/trigger-call', async (req, res) => {
-  const { error } = triggerSchema.validate(req.body);
+  console.log('--- /trigger-call endpoint HIT ---');
+
+  req.on('data', chunk => console.log('Received chunk:', chunk.toString()));
+  req.on('end', () => console.log('Request end'));
+  console.log('Parsed req.body:', req.body);
+
+  const { error } = callSchema.validate(req.body);
   if (error) {
+    console.error('Validation error:', error.details[0].message);
     return res.status(400).json({ error: error.details[0].message });
   }
 
