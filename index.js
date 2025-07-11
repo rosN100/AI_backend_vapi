@@ -74,10 +74,13 @@ function validateConfiguration() {
 // ------------------------------------------------------------
 // Ultravox call creation
 // ------------------------------------------------------------
-function createUltravoxCall(voice) {
+import { getUltravoxAgentConfig } from './ultravox_agent_config.js';
+
+function createUltravoxCall(voice, candidateName) {
+  const agentConfig = getUltravoxAgentConfig(candidateName);
   const callConfig = {
-    voice: voice,
-    medium: { twilio: {} }
+    medium: { twilio: {} },
+    agent: agentConfig
   };
 
   const request = https.request('https://api.ultravox.ai/api/calls', {
@@ -113,7 +116,7 @@ function createUltravoxCall(voice) {
 
 async function triggerUltraVoxCall(data) {
   console.log('📞 Creating Ultravox call...');
-  const uv = await createUltravoxCall(data.voice);
+  const uv = await createUltravoxCall(data.voice, data.candidateName);
   console.log('✅ Got Ultravox joinUrl:', uv.joinUrl);
 
   console.log('📱 Initiating Twilio call...');
