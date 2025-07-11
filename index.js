@@ -74,24 +74,27 @@ function validateConfiguration() {
 // ------------------------------------------------------------
 // Ultravox call creation
 // ------------------------------------------------------------
-// import { RIYA_SYSTEM_PROMPT, RIYA_INITIAL_GREETING } from './riya_system_prompt.js'; // Build3 Startup Accelerator prompt (commented out)
-import { RIYA_REALESTATE_SYSTEM_PROMPT, RIYA_REALESTATE_INITIAL_GREETING } from './riya_realestate_system_prompt.js'; // Real Estate prompt
+import { RIYA_SYSTEM_PROMPT, RIYA_INITIAL_GREETING } from './riya_system_prompt.js'; // Build3 Startup Accelerator prompt (commented out)
+// import { RIYA_REALESTATE_SYSTEM_PROMPT, RIYA_REALESTATE_INITIAL_GREETING } from './riya_realestate_system_prompt.js'; // Real Estate prompt
 
 function createUltravoxCall(voice, candidateName) {
   const callConfig = {
-    // systemPrompt: RIYA_SYSTEM_PROMPT,
-    systemPrompt: RIYA_REALESTATE_SYSTEM_PROMPT,
+    systemPrompt: RIYA_SYSTEM_PROMPT,
+    // systemPrompt: RIYA_REALESTATE_SYSTEM_PROMPT,
     voice: voice,
     temperature: 0.4,
     recordingEnabled: true,
     firstSpeakerSettings: {
       agent: {
-        // text: RIYA_INITIAL_GREETING(candidateName)
-        text: RIYA_REALESTATE_INITIAL_GREETING(candidateName)
+        text: RIYA_INITIAL_GREETING(candidateName)
+        // text: RIYA_REALESTATE_INITIAL_GREETING(candidateName)
       }
     },
+    selectedTools: [
+      "a0169d79-2355-4dbb-8335-5ed0d59c8e4f"
+    ],
     medium: { twilio: {} }
-  };
+  ;
 
 
   const request = https.request('https://api.ultravox.ai/api/calls', {
