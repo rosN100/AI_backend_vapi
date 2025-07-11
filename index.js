@@ -74,14 +74,22 @@ function validateConfiguration() {
 // ------------------------------------------------------------
 // Ultravox call creation
 // ------------------------------------------------------------
-import { getUltravoxAgentConfig } from './ultravox_agent_config.js';
+import { RIYA_SYSTEM_PROMPT, RIYA_INITIAL_GREETING } from './riya_system_prompt.js';
 
 function createUltravoxCall(voice, candidateName) {
-  const agentConfig = getUltravoxAgentConfig(candidateName);
   const callConfig = {
-    medium: { twilio: {} },
-    agent: agentConfig
+    systemPrompt: RIYA_SYSTEM_PROMPT,
+    voice: voice,
+    temperature: 0.4,
+    recordingEnabled: true,
+    firstSpeakerSettings: {
+      agent: {
+        text: RIYA_INITIAL_GREETING(candidateName)
+      }
+    },
+    medium: { twilio: {} }
   };
+
 
   const request = https.request('https://api.ultravox.ai/api/calls', {
     method: 'POST',
