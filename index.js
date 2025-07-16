@@ -92,7 +92,10 @@ function createUltravoxCall(voice, candidateName) {
     },
     selectedTools: [
       {
-        toolId: "a0169d79-2355-4dbb-8335-5ed0d59c8e4f"
+        toolId: "a0169d79-2355-4dbb-8335-5ed0d59c8e4f" // get_availability
+      },
+      {
+        toolId: "def66ef2-a5e2-425b-a25e-eb9d6fad2759" // book_appointment
       }
     ],
     medium: { twilio: {} }
