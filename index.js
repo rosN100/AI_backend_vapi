@@ -91,7 +91,9 @@ function createUltravoxCall(voice, candidateName) {
       }
     },
     selectedTools: [
-      "a0169d79-2355-4dbb-8335-5ed0d59c8e4f"
+      {
+        toolId: "a0169d79-2355-4dbb-8335-5ed0d59c8e4f"
+      }
     ],
     medium: { twilio: {} }
   }
