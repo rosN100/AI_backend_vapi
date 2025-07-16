@@ -92,6 +92,9 @@ function createUltravoxCall(voice, candidateName) {
     },
     selectedTools: [
       {
+        toolId: "04cfc101-8827-4818-a2f3-e8ca477e089d" // Todays_date
+      },
+      {
         toolId: "a0169d79-2355-4dbb-8335-5ed0d59c8e4f" // get_availability
       },
       {
