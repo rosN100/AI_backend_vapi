@@ -94,7 +94,7 @@ function createUltravoxCall(voice, candidateName) {
       "a0169d79-2355-4dbb-8335-5ed0d59c8e4f"
     ],
     medium: { twilio: {} }
-  ;
+  }
 
 
   const request = https.request('https://api.ultravox.ai/api/calls', {
