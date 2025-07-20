@@ -74,10 +74,11 @@ function validateConfiguration() {
 // ------------------------------------------------------------
 // Ultravox call creation
 // ------------------------------------------------------------
-import { RIYA_SYSTEM_PROMPT, RIYA_INITIAL_GREETING } from './riya_system_prompt.js'; // Build3 Startup Accelerator prompt (commented out)
+import { RIYA_SYSTEM_PROMPT, RIYA_INITIAL_GREETING, TODAYS_DATE } from './riya_system_prompt.js'; // Build3 Startup Accelerator prompt (commented out)
 // import { RIYA_REALESTATE_SYSTEM_PROMPT, RIYA_REALESTATE_INITIAL_GREETING } from './riya_realestate_system_prompt.js'; // Real Estate prompt
 
 function createUltravoxCall(voice, candidateName) {
+  console.log('Today\'s date for Ultravox:', TODAYS_DATE);
   const callConfig = {
     systemPrompt: RIYA_SYSTEM_PROMPT,
     // systemPrompt: RIYA_REALESTATE_SYSTEM_PROMPT,
