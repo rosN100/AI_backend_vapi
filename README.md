@@ -1,6 +1,6 @@
-# Ultravox Twilio Outbound Call API
+# VAPI Outbound Call API
 
-This project exposes a simple Express server that integrates Ultravox AI with Twilio to place outbound phone calls. It is designed to work with an n8n workflow and provides two REST endpoints.
+This project exposes a simple Express server that integrates with VAPI to place outbound phone calls. It is designed to work with an n8n workflow and provides two REST endpoints.
 
 ## Endpoints
 
@@ -15,36 +15,68 @@ This project exposes a simple Express server that integrates Ultravox AI with Tw
    ```bash
    npm install
    ```
-2. Copy `.env.example` to `.env` and fill in your credentials.
+2. Create a `.env` file and add your VAPI credentials.
 3. Start the server:
    ```bash
    npm start
    ```
 
-The server validates incoming payloads using **Joi** and reuses the existing Ultravox call logic.
+The server validates incoming payloads using **Joi** and uses VAPI for voice call management.
 
 ## Environment Variables
 
-See `.env.example` for all required variables:
+Required environment variables:
 
-- `TWILIO_ACCOUNT_SID` / `TWILIO_AUTH_TOKEN` – Twilio credentials
-- `TWILIO_PHONE_NUMBER` – Twilio phone number used to place calls
-- `ULTRAVOX_API_KEY` – Ultravox API key
+- `VAPI_API_KEY` – VAPI API key for authentication
+- `VAPI_ASSISTANT_ID` – VAPI Assistant ID to use for calls
+- `VAPI_PHONE_NUMBER_ID` – VAPI Phone Number ID for outbound calls
 - `N8N_RESULTS_URL` – n8n webhook to receive post‑call results
 
 ## Usage
 
-Send a POST request to `/trigger-call` with a JSON body:
+Send a POST request to `/trigger-call` with property data from your CRM:
 
 ```json
 {
-  "candidateId": "string",
-  "candidateName": "string",
-  "candidatePhone": "string",
-  "candidateGender": "string",
-  "voice": "string"
+  "property_id": "LP001",
+  "property_name": "Oberoi Sky City",
+  "location": "Borivali East",
+  "area_sqft": 1850,
+  "bedrooms": 3,
+  "bathrooms": 3,
+  "price_crores": 4.2,
+  "price_per_sqft": 22703,
+  "property_type": "Apartment",
+  "builder": "Oberoi Realty",
+  "possession_status": "Ready to Move",
+  "amenities": "Swimming Pool, Gym, Club House, Security",
+  "contact_person": "Rajesh Sharma",
+  "phone_number": "+91-9876543210",
+  "email": "rajesh.sharma@email.com",
+  "lead_status": "Hot Lead",
+  "last_contacted": "2025-01-15",
+  "notes": "Interested in 3BHK"
 }
 ```
+
+## How Property Context is Passed to VAPI
+
+The system uses VAPI's **dynamic variables** feature to pass property data as context to the AI assistant:
+
+1. **Variable Values**: All property data is passed via `assistantOverrides.variableValues`
+2. **System Prompt**: The assistant's system prompt uses variables like `{{property_name}}`, `{{contact_person}}`, etc.
+3. **First Message**: Dynamically generated greeting with property-specific information
+4. **Real-time Context**: The assistant has access to all property details during the conversation
+
+### Available Variables in Assistant:
+- `{{contact_person}}` - Lead's name
+- `{{property_name}}` - Property name
+- `{{location}}` - Property location
+- `{{price_crores}}` - Property price
+- `{{bedrooms}}`, `{{bathrooms}}` - Property specs
+- `{{amenities}}` - Property amenities
+- `{{lead_status}}` - Current lead status
+- `{{notes}}` - Previous interaction notes
 
 After the call completes, post the results to `/post-call-results`:
 

@@ -1,22 +1,17 @@
 import express from 'express';
 import dotenv from 'dotenv';
-import twilio from 'twilio';
-import https from 'https';
-import Joi from 'joi';
 import fetch from 'node-fetch';
+import Joi from 'joi';
 
 dotenv.config();
 
 const {
   PORT = 3000,
-  TWILIO_ACCOUNT_SID,
-  TWILIO_AUTH_TOKEN,
-  TWILIO_PHONE_NUMBER,
-  ULTRAVOX_API_KEY,
+  VAPI_API_KEY,
+  VAPI_ASSISTANT_ID,
+  VAPI_PHONE_NUMBER_ID,
   N8N_RESULTS_URL
 } = process.env;
-
-// const SYSTEM_PROMPT = 'Your name is Steve and you are calling a person on the phone. Ask them their name and see how they are doing.';
 
 const app = express();
 app.use(express.json());
@@ -25,11 +20,27 @@ app.use(express.json());
 // Validation schemas
 // ------------------------------------------------------------
 const callSchema = Joi.object({
-  candidateId: Joi.string().required(),
-  candidateName: Joi.string().required(),
-  candidatePhone: Joi.string().required(),
-  candidateGender: Joi.string().required(),
-  voice: Joi.string().required()
+  // Property Information
+  property_id: Joi.string().required(),
+  property_name: Joi.string().required(),
+  location: Joi.string().required(),
+  area_sqft: Joi.number().required(),
+  bedrooms: Joi.number().required(),
+  bathrooms: Joi.number().required(),
+  price_crores: Joi.number().required(),
+  price_per_sqft: Joi.number().required(),
+  property_type: Joi.string().required(),
+  builder: Joi.string().required(),
+  possession_status: Joi.string().required(),
+  amenities: Joi.string().required(),
+  
+  // Lead Information
+  contact_person: Joi.string().required(),
+  phone_number: Joi.string().required(),
+  email: Joi.string().email().required(),
+  lead_status: Joi.string().required(),
+  last_contacted: Joi.string().optional(),
+  notes: Joi.string().optional()
 });
 
 const resultsSchema = Joi.object({
@@ -47,10 +58,9 @@ const resultsSchema = Joi.object({
 // ------------------------------------------------------------
 function validateConfiguration() {
   const required = [
-    { name: 'TWILIO_ACCOUNT_SID', value: TWILIO_ACCOUNT_SID, pattern: /^AC[a-zA-Z0-9]{32}$/ },
-    { name: 'TWILIO_AUTH_TOKEN', value: TWILIO_AUTH_TOKEN, pattern: /^[a-zA-Z0-9]{32}$/ },
-    { name: 'TWILIO_PHONE_NUMBER', value: TWILIO_PHONE_NUMBER, pattern: /^\+[1-9]\d{1,14}$/ },
-    { name: 'ULTRAVOX_API_KEY', value: ULTRAVOX_API_KEY, pattern: /^[a-zA-Z0-9]{8}\.[a-zA-Z0-9]{32}$/ },
+    { name: 'VAPI_API_KEY', value: VAPI_API_KEY },
+    { name: 'VAPI_ASSISTANT_ID', value: VAPI_ASSISTANT_ID },
+    { name: 'VAPI_PHONE_NUMBER_ID', value: VAPI_PHONE_NUMBER_ID },
     { name: 'N8N_RESULTS_URL', value: N8N_RESULTS_URL, pattern: /^https?:\/\// }
   ];
 
@@ -72,84 +82,80 @@ function validateConfiguration() {
 }
 
 // ------------------------------------------------------------
-// Ultravox call creation
+// VAPI call creation
 // ------------------------------------------------------------
-import { RIYA_SYSTEM_PROMPT, RIYA_INITIAL_GREETING, TODAYS_DATE } from './riya_system_prompt.js'; // Build3 Startup Accelerator prompt (commented out)
-// import { RIYA_REALESTATE_SYSTEM_PROMPT, RIYA_REALESTATE_INITIAL_GREETING } from './riya_realestate_system_prompt.js'; // Real Estate prompt
+import { RIYA_SYSTEM_PROMPT, RIYA_INITIAL_GREETING, TODAYS_DATE } from './riya_system_prompt.js';
 
-function createUltravoxCall(voice, candidateName) {
-  console.log('Today\'s date for Ultravox:', TODAYS_DATE);
+async function createVapiCall(propertyData) {
+  console.log('Today\'s date for VAPI:', TODAYS_DATE);
+  
   const callConfig = {
-    systemPrompt: RIYA_SYSTEM_PROMPT,
-    // systemPrompt: RIYA_REALESTATE_SYSTEM_PROMPT,
-    voice: voice,
-    temperature: 0.4,
-    recordingEnabled: true,
-    firstSpeakerSettings: {
-      agent: {
-        text: RIYA_INITIAL_GREETING(candidateName)
-        // text: RIYA_REALESTATE_INITIAL_GREETING(candidateName)
-      }
+    assistantId: VAPI_ASSISTANT_ID,
+    phoneNumberId: VAPI_PHONE_NUMBER_ID,
+    customer: {
+      number: propertyData.phone_number
     },
-    selectedTools: [
-      {
-        toolId: "a0169d79-2355-4dbb-8335-5ed0d59c8e4f" // get_availability
-      },
-      {
-        toolId: "def66ef2-a5e2-425b-a25e-eb9d6fad2759" // book_appointment
+    // Override assistant settings for this specific call
+    assistantOverrides: {
+      firstMessage: `Hello ${propertyData.contact_person}, I am Riya from our real estate team. I'm calling about the ${propertyData.property_name} property in ${propertyData.location}. Is this a good time to talk?`,
+      
+      // Pass property data as dynamic variables
+      variableValues: {
+        contact_person: propertyData.contact_person,
+        property_name: propertyData.property_name,
+        location: propertyData.location,
+        price_crores: propertyData.price_crores.toString(),
+        bedrooms: propertyData.bedrooms.toString(),
+        bathrooms: propertyData.bathrooms.toString(),
+        area_sqft: propertyData.area_sqft.toString(),
+        property_type: propertyData.property_type,
+        builder: propertyData.builder,
+        possession_status: propertyData.possession_status,
+        amenities: propertyData.amenities,
+        lead_status: propertyData.lead_status,
+        notes: propertyData.notes || 'No specific notes'
       }
-    ],
-    medium: { twilio: {} }
-  }
-
-
-  const request = https.request('https://api.ultravox.ai/api/calls', {
-    method: 'POST',
-    headers: {
-      'Content-Type': 'application/json',
-      'X-API-Key': ULTRAVOX_API_KEY
     }
-  });
+  };
 
-  return new Promise((resolve, reject) => {
-    let data = '';
-    request.on('response', response => {
-      response.on('data', chunk => data += chunk);
-      response.on('end', () => {
-        try {
-          const parsed = JSON.parse(data);
-          if (response.statusCode >= 200 && response.statusCode < 300) {
-            resolve(parsed);
-          } else {
-            reject(new Error(`Ultravox API error (${response.statusCode}): ${data}`));
-          }
-        } catch (err) {
-          reject(new Error(`Failed to parse Ultravox response: ${data}`));
-        }
-      });
+  try {
+    const response = await fetch('https://api.vapi.ai/call', {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json',
+        'Authorization': `Bearer ${VAPI_API_KEY}`
+      },
+      body: JSON.stringify(callConfig)
     });
-    request.on('error', err => reject(err));
-    request.write(JSON.stringify(callConfig));
-    request.end();
-  });
+
+    if (!response.ok) {
+      const errorText = await response.text();
+      throw new Error(`VAPI API error (${response.status}): ${errorText}`);
+    }
+
+    const callData = await response.json();
+    return callData;
+  } catch (error) {
+    console.error('Error creating VAPI call:', error);
+    throw error;
+  }
 }
 
-async function triggerUltraVoxCall(data) {
-  console.log('📞 Creating Ultravox call...');
-  const uv = await createUltravoxCall(data.voice, data.candidateName);
-  console.log('✅ Got Ultravox joinUrl:', uv.joinUrl);
+async function triggerVapiCall(propertyData) {
+  console.log('📞 Creating VAPI call for property:', propertyData.property_name);
+  console.log('📱 Calling:', propertyData.contact_person, 'at', propertyData.phone_number);
+  
+  const vapiCall = await createVapiCall(propertyData);
+  console.log('✅ VAPI call initiated:', vapiCall.id);
 
-  console.log('📱 Initiating Twilio call...');
-  const client = twilio(TWILIO_ACCOUNT_SID, TWILIO_AUTH_TOKEN);
-  const call = await client.calls.create({
-    twiml: `<Response><Connect><Stream url="${uv.joinUrl}"/></Connect></Response>`,
-    to: data.candidatePhone,
-    from: TWILIO_PHONE_NUMBER
-  });
-
-  console.log('🎉 Twilio outbound phone call initiated!');
-  console.log(`📋 Twilio Call SID: ${call.sid}`);
-  return { joinUrl: uv.joinUrl, callSid: call.sid };
+  console.log('🎉 Outbound phone call initiated via VAPI!');
+  console.log(`📋 VAPI Call ID: ${vapiCall.id}`);
+  return { 
+    callId: vapiCall.id, 
+    status: vapiCall.status,
+    property_id: propertyData.property_id,
+    contact_person: propertyData.contact_person
+  };
 }
 
 async function postResultsToN8n(results) {
@@ -190,7 +196,7 @@ app.post('/trigger-call', async (req, res) => {
   }
 
   try {
-    const callInfo = await triggerUltraVoxCall(req.body);
+    const callInfo = await triggerVapiCall(req.body);
     res.json({ status: 'initiated', data: callInfo });
   } catch (err) {
     console.error(err);
