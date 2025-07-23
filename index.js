@@ -89,11 +89,15 @@ import { RIYA_SYSTEM_PROMPT, RIYA_INITIAL_GREETING, TODAYS_DATE } from './riya_s
 async function createVapiCall(propertyData) {
   console.log('Today\'s date for VAPI:', TODAYS_DATE);
   
+  // Format and log phone number
+  const formattedPhone = formatPhoneNumber(propertyData.phone_number);
+  console.log(`Phone number formatting: ${propertyData.phone_number} -> ${formattedPhone}`);
+  
   const callConfig = {
     assistantId: VAPI_ASSISTANT_ID,
     phoneNumberId: VAPI_PHONE_NUMBER_ID,
     customer: {
-      number: propertyData.phone_number
+      number: formattedPhone
     },
     // Override assistant settings for this specific call
     assistantOverrides: {
@@ -180,8 +184,58 @@ async function postResultsToN8n(results) {
 }
 
 // ------------------------------------------------------------
+// Helper Functions
+// ------------------------------------------------------------
+
+// Format phone number to E.164 format
+function formatPhoneNumber(phoneNumber) {
+  // Remove all non-digit characters
+  let cleaned = phoneNumber.replace(/\D/g, '');
+  
+  // If it starts with 91 (India country code), add + prefix
+  if (cleaned.startsWith('91') && cleaned.length === 12) {
+    return '+' + cleaned;
+  }
+  
+  // If it's 10 digits, assume it's Indian number without country code
+  if (cleaned.length === 10) {
+    return '+91' + cleaned;
+  }
+  
+  // If it already has + prefix, return as is
+  if (phoneNumber.startsWith('+')) {
+    return phoneNumber;
+  }
+  
+  // Default: add + prefix to whatever we have
+  return '+' + cleaned;
+}
+
+// ------------------------------------------------------------
 // Express Endpoints
 // ------------------------------------------------------------
+
+// Root endpoint for basic health check
+app.get('/', (req, res) => {
+  res.json({ 
+    message: 'VAPI Backend Server is running!', 
+    endpoints: {
+      'POST /trigger-call': 'Trigger a VAPI call with property data',
+      'POST /post-call-results': 'Receive call results from VAPI'
+    },
+    timestamp: new Date().toISOString()
+  });
+});
+
+// Handle POST requests to root (common mistake)
+app.post('/', (req, res) => {
+  res.status(400).json({ 
+    error: 'Invalid endpoint. Use POST /trigger-call to initiate calls.',
+    correctEndpoint: '/trigger-call',
+    receivedData: req.body
+  });
+});
+
 app.post('/trigger-call', async (req, res) => {
   console.log('--- /trigger-call endpoint HIT ---');
 

@@ -36,6 +36,10 @@ Required environment variables:
 
 Send a POST request to `/trigger-call` with property data from your CRM:
 
+**⚠️ IMPORTANT: Make sure your URL ends with `/trigger-call`**
+- ✅ Correct: `https://your-domain.com/trigger-call`
+- ❌ Wrong: `https://your-domain.com/` (will cause 404 error)
+
 ```json
 {
   "property_id": "LP001",
@@ -51,13 +55,34 @@ Send a POST request to `/trigger-call` with property data from your CRM:
   "possession_status": "Ready to Move",
   "amenities": "Swimming Pool, Gym, Club House, Security",
   "contact_person": "Rajesh Sharma",
-  "phone_number": "+91-9876543210",
+  "phone_number": "918884154540",
   "email": "rajesh.sharma@email.com",
   "lead_status": "Hot Lead",
   "last_contacted": "2025-01-15",
   "notes": "Interested in 3BHK"
 }
 ```
+
+## Troubleshooting
+
+### Common Error: "Cannot POST /"
+If you get a 404 error with "Cannot POST /", check your n8n HTTP Request node:
+1. Make sure the URL ends with `/trigger-call`
+2. Set Content-Type header to `application/json`
+3. Enable "Send Body" and set to JSON format
+
+### Phone Number Format Error
+If you get "customer.number must be a valid phone number in the E.164 format":
+- The server automatically formats Indian phone numbers
+- Supported formats:
+  - `"918884154540"` → `"+918884154540"` ✅
+  - `"8884154540"` → `"+918884154540"` ✅  
+  - `"+918884154540"` → `"+918884154540"` ✅
+  - `"91-888-415-4540"` → `"+918884154540"` ✅
+
+### Testing the API
+You can test if the server is running by visiting the root URL in your browser:
+- `https://your-domain.com/` - Should show server status
 
 ## How Property Context is Passed to VAPI
 
