@@ -1,0 +1,1637 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>AI Lead Qualification Dashboard</title>
+  <style>
+    * {
+      margin: 0;
+      padding: 0;
+      box-sizing: border-box;
+    }
+
+    body {
+      font-family: 'Inter', -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+      background: #f8fafc;
+      color: #334155;
+      line-height: 1.6;
+      margin: 0;
+    }
+
+    .app-container {
+      display: flex;
+      min-height: 100vh;
+    }
+
+    /* Sidebar Navigation */
+    .sidebar {
+      width: 280px;
+      background: white;
+      border-right: 1px solid #e2e8f0;
+      padding: 24px 0;
+      position: fixed;
+      height: 100vh;
+      overflow-y: auto;
+      z-index: 100;
+      display: flex;
+      flex-direction: column;
+    }
+
+    .logo {
+      display: flex;
+      align-items: center;
+      padding: 0 24px 32px;
+      border-bottom: 1px solid #e2e8f0;
+      margin-bottom: 24px;
+    }
+
+    .logo-icon {
+      width: 48px;
+      height: 48px;
+      background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+      border-radius: 12px;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      font-size: 24px;
+      margin-right: 12px;
+    }
+
+    .logo-text {
+      font-size: 1.5rem;
+      font-weight: 700;
+      color: #1e293b;
+    }
+
+    .nav-menu {
+      padding: 0 16px;
+      flex: 1;
+      display: flex;
+      flex-direction: column;
+    }
+
+    .nav-item {
+      display: flex;
+      align-items: center;
+      padding: 12px 16px;
+      margin-bottom: 4px;
+      border-radius: 8px;
+      cursor: pointer;
+      transition: all 0.2s ease;
+      color: #64748b;
+      text-decoration: none;
+    }
+
+    .nav-item:hover {
+      background: #f1f5f9;
+      color: #334155;
+    }
+
+    .nav-item.active {
+      background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+      color: white;
+    }
+
+    .nav-item.active .nav-icon {
+      background: rgba(255, 255, 255, 0.2);
+    }
+
+    .nav-icon {
+      width: 20px;
+      height: 20px;
+      margin-right: 12px;
+      font-size: 18px;
+    }
+
+    /* User Info and Bottom Section */
+    .nav-bottom {
+      margin-top: auto;
+      padding-top: 16px;
+      border-top: 1px solid #e2e8f0;
+    }
+
+    .user-info {
+      padding: 12px 16px;
+      margin-bottom: 8px;
+    }
+
+    .user-name {
+      font-size: 0.875rem;
+      font-weight: 600;
+      color: #1e293b;
+      margin-bottom: 4px;
+    }
+
+    .user-email {
+      font-size: 0.75rem;
+      color: #64748b;
+    }
+
+    .bottom-nav-item {
+      display: flex;
+      align-items: center;
+      padding: 12px 16px;
+      margin: 2px 0;
+      border-radius: 8px;
+      cursor: pointer;
+      transition: all 0.2s ease;
+      font-size: 0.875rem;
+      font-weight: 500;
+    }
+
+    .bottom-nav-item:hover {
+      background: #f1f5f9;
+    }
+
+    .bottom-nav-item.logout {
+      color: #ef4444;
+    }
+
+    .bottom-nav-item.logout:hover {
+      background: #fef2f2;
+    }
+
+    .bottom-nav-icon {
+      width: 20px;
+      height: 20px;
+      margin-right: 12px;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      font-size: 1rem;
+    }
+
+    /* Main Content */
+    .main-content {
+      flex: 1;
+      margin-left: 280px;
+      padding: 24px;
+    }
+
+    .dashboard {
+      max-width: 1400px;
+    }
+
+    .header {
+      background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+      border-radius: 16px;
+      padding: 32px;
+      margin-bottom: 32px;
+      color: white;
+      text-align: center;
+      box-shadow: 0 10px 25px rgba(102, 126, 234, 0.3);
+    }
+
+    .header h1 {
+      font-size: 2.5rem;
+      font-weight: 700;
+      margin-bottom: 8px;
+      letter-spacing: -0.025em;
+    }
+
+    .header p {
+      font-size: 1.1rem;
+      opacity: 0.9;
+      font-weight: 400;
+    }
+
+    .metrics-grid {
+      display: grid;
+      grid-template-columns: repeat(4, 1fr);
+      gap: 16px;
+      margin-bottom: 32px;
+    }
+
+    .metric-card {
+      background: white;
+      border-radius: 12px;
+      padding: 20px 16px;
+      box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.1);
+      border: 1px solid #e2e8f0;
+      transition: transform 0.2s ease, box-shadow 0.2s ease;
+      min-width: 0;
+    }
+
+    .metric-card:hover {
+      transform: translateY(-2px);
+      box-shadow: 0 10px 25px rgba(0, 0, 0, 0.15);
+    }
+
+    .metric-header {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      margin-bottom: 12px;
+    }
+
+    .metric-title {
+      font-size: 0.75rem;
+      font-weight: 600;
+      color: #64748b;
+      text-transform: uppercase;
+      letter-spacing: 0.05em;
+      line-height: 1.2;
+    }
+
+    .metric-icon {
+      width: 32px;
+      height: 32px;
+      border-radius: 6px;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      font-size: 1rem;
+    }
+
+    .metric-value {
+      font-size: 1.875rem;
+      font-weight: 700;
+      color: #1e293b;
+      margin-bottom: 2px;
+    }
+
+    .metric-subtitle {
+      font-size: 0.75rem;
+      color: #64748b;
+      line-height: 1.2;
+    }
+
+    .charts-grid {
+      display: grid;
+      grid-template-columns: repeat(auto-fit, minmax(500px, 1fr));
+      gap: 24px;
+    }
+
+    .chart-card {
+      background: white;
+      border-radius: 12px;
+      padding: 24px;
+      box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.1);
+      border: 1px solid #e2e8f0;
+    }
+
+    .chart-header {
+      margin-bottom: 20px;
+    }
+
+    .chart-title {
+      font-size: 1.25rem;
+      font-weight: 600;
+      color: #1e293b;
+      margin-bottom: 4px;
+    }
+
+    .chart-subtitle {
+      font-size: 0.875rem;
+      color: #64748b;
+    }
+
+    .chart-container {
+      position: relative;
+      height: 300px;
+    }
+
+    .gauge-container {
+      height: 250px;
+    }
+
+    .funnel-container {
+      height: 350px;
+    }
+
+    /* Color scheme */
+    .metric-calls { background: linear-gradient(135deg, #3b82f6, #1d4ed8); }
+    .metric-answered { background: linear-gradient(135deg, #10b981, #059669); }
+    .metric-qualified { background: linear-gradient(135deg, #f59e0b, #d97706); }
+    .metric-interventions { background: linear-gradient(135deg, #ef4444, #dc2626); }
+
+    .loading {
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      height: 200px;
+      color: #64748b;
+      font-style: italic;
+    }
+
+    .error {
+      color: #ef4444;
+      text-align: center;
+      padding: 20px;
+      background: #fef2f2;
+      border-radius: 8px;
+      border: 1px solid #fecaca;
+    }
+
+    /* Page Content */
+    .page {
+      display: none;
+    }
+
+    .page.active {
+      display: block;
+    }
+
+    /* Coming Soon Pages */
+    .coming-soon {
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      justify-content: center;
+      min-height: 60vh;
+      text-align: center;
+    }
+
+    .coming-soon-icon {
+      width: 120px;
+      height: 120px;
+      background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+      border-radius: 50%;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      font-size: 48px;
+      margin-bottom: 24px;
+      opacity: 0.9;
+    }
+
+    .coming-soon h2 {
+      font-size: 2rem;
+      font-weight: 600;
+      color: #1e293b;
+      margin-bottom: 12px;
+    }
+
+    .coming-soon p {
+      font-size: 1.1rem;
+      color: #64748b;
+      max-width: 400px;
+      line-height: 1.6;
+    }
+
+    /* Leads Page Styles */
+    .leads-container {
+      padding: 24px;
+      max-width: 1400px;
+    }
+
+    .leads-header {
+      display: flex;
+      justify-content: space-between;
+      align-items: flex-start;
+      margin-bottom: 32px;
+    }
+
+    .leads-title h1 {
+      font-size: 2rem;
+      font-weight: 600;
+      color: #1e293b;
+      margin-bottom: 8px;
+    }
+
+    .leads-title p {
+      color: #64748b;
+      font-size: 1rem;
+    }
+
+    .leads-actions {
+      display: flex;
+      gap: 12px;
+    }
+
+    .export-btn {
+      display: flex;
+      align-items: center;
+      gap: 8px;
+      padding: 12px 20px;
+      border: none;
+      border-radius: 8px;
+      font-weight: 500;
+      cursor: pointer;
+      transition: all 0.2s ease;
+      font-size: 0.875rem;
+    }
+
+    .export-qualified {
+      background: #10b981;
+      color: white;
+    }
+
+    .export-qualified:hover {
+      background: #059669;
+      transform: translateY(-1px);
+    }
+
+    .export-all {
+      background: #f8fafc;
+      color: #64748b;
+      border: 1px solid #e2e8f0;
+    }
+
+    .export-all:hover {
+      background: #f1f5f9;
+      color: #334155;
+    }
+
+    .filters-section {
+      background: white;
+      border-radius: 12px;
+      padding: 24px;
+      margin-bottom: 24px;
+      box-shadow: 0 1px 3px rgba(0, 0, 0, 0.1);
+    }
+
+    .filters-header {
+      display: flex;
+      align-items: center;
+      gap: 8px;
+      margin-bottom: 20px;
+    }
+
+    .filter-icon {
+      font-size: 1.2rem;
+    }
+
+    .filters-header h3 {
+      font-size: 1.1rem;
+      font-weight: 500;
+      color: #374151;
+    }
+
+    .filters-row {
+      display: grid;
+      grid-template-columns: 1fr auto auto auto;
+      gap: 16px;
+      align-items: center;
+    }
+
+    .filter-input, .filter-select {
+      padding: 10px 14px;
+      border: 2px solid #e5e7eb;
+      border-radius: 8px;
+      font-size: 0.875rem;
+      background: #f9fafb;
+      transition: all 0.2s ease;
+    }
+
+    .filter-input:focus, .filter-select:focus {
+      outline: none;
+      border-color: #667eea;
+      background: white;
+      box-shadow: 0 0 0 3px rgba(102, 126, 234, 0.1);
+    }
+
+    .filter-select {
+      min-width: 150px;
+      cursor: pointer;
+    }
+
+    .results-count {
+      font-size: 0.875rem;
+      color: #6b7280;
+      white-space: nowrap;
+    }
+
+    .leads-table-container {
+      background: white;
+      border-radius: 12px;
+      overflow: hidden;
+      box-shadow: 0 1px 3px rgba(0, 0, 0, 0.1);
+    }
+
+    .leads-table {
+      width: 100%;
+      border-collapse: collapse;
+    }
+
+    .leads-table th {
+      background: #f8fafc;
+      padding: 16px;
+      text-align: left;
+      font-weight: 500;
+      color: #374151;
+      font-size: 0.875rem;
+      border-bottom: 1px solid #e5e7eb;
+    }
+
+    .leads-table td {
+      padding: 16px;
+      border-bottom: 1px solid #f1f5f9;
+      font-size: 0.875rem;
+    }
+
+    .leads-table tbody tr:hover {
+      background: #f8fafc;
+    }
+
+    .status-badge {
+      display: inline-flex;
+      align-items: center;
+      padding: 4px 12px;
+      border-radius: 20px;
+      font-size: 0.75rem;
+      font-weight: 500;
+      text-transform: capitalize;
+    }
+
+    .status-qualified {
+      background: #dcfce7;
+      color: #166534;
+    }
+
+    .status-unqualified {
+      background: #fef2f2;
+      color: #dc2626;
+    }
+
+    .status-needs_review {
+      background: #fef3c7;
+      color: #d97706;
+    }
+
+    .qualification-reason {
+      max-width: 200px;
+    }
+
+    .qualification-title {
+      font-weight: 500;
+      color: #374151;
+      margin-bottom: 4px;
+    }
+
+    .qualification-details {
+      font-size: 0.75rem;
+      color: #6b7280;
+      font-style: italic;
+    }
+
+    .action-btn {
+      background: none;
+      border: none;
+      color: #6b7280;
+      cursor: pointer;
+      padding: 8px;
+      border-radius: 6px;
+      transition: all 0.2s ease;
+    }
+
+    .action-btn:hover {
+      background: #f3f4f6;
+      color: #374151;
+    }
+
+    .loading-state, .empty-state {
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      justify-content: center;
+      padding: 60px 20px;
+      text-align: center;
+    }
+
+    .loading-spinner {
+      width: 32px;
+      height: 32px;
+      border: 3px solid #f3f4f6;
+      border-top: 3px solid #667eea;
+      border-radius: 50%;
+      animation: spin 1s linear infinite;
+      margin-bottom: 16px;
+    }
+
+    .empty-icon {
+      font-size: 48px;
+      margin-bottom: 16px;
+      opacity: 0.5;
+    }
+
+    .empty-state h3 {
+      color: #374151;
+      margin-bottom: 8px;
+    }
+
+    .empty-state p {
+      color: #6b7280;
+    }
+
+    @media (max-width: 768px) {
+      .sidebar {
+        width: 240px;
+      }
+      
+      .main-content {
+        margin-left: 240px;
+        padding: 16px;
+      }
+      
+      .charts-grid {
+        grid-template-columns: 1fr;
+      }
+      
+      .metrics-grid {
+        grid-template-columns: repeat(auto-fit, minmax(250px, 1fr));
+      }
+
+      .coming-soon-icon {
+        width: 80px;
+        height: 80px;
+        font-size: 32px;
+      }
+
+      .coming-soon h2 {
+        font-size: 1.5rem;
+      }
+    }
+
+    @media (max-width: 640px) {
+      .sidebar {
+        width: 200px;
+      }
+      
+      .main-content {
+        margin-left: 200px;
+        padding: 12px;
+      }
+    }
+  </style>
+</head>
+<body>
+  <div class="app-container">
+    <!-- Sidebar Navigation -->
+    <div class="sidebar">
+      <div class="logo">
+        <div class="logo-icon">📞</div>
+        <div class="logo-text">Soraaya AI</div>
+      </div>
+      
+      <nav class="nav-menu">
+        <div class="nav-main">
+          <div class="nav-item active" onclick="showPage('dashboard', event)">
+            <div class="nav-icon">📊</div>
+            <span>Dashboard</span>
+          </div>
+          <div class="nav-item" onclick="showPage('leads', event)">
+            <div class="nav-icon">👥</div>
+            <span>Leads</span>
+          </div>
+          <div class="nav-item" onclick="showPage('insights', event)">
+            <div class="nav-icon">📈</div>
+            <span>Insights</span>
+          </div>
+          <div class="nav-item" onclick="showPage('notifications', event)">
+            <div class="nav-icon">🔔</div>
+            <span>Notifications</span>
+          </div>
+        </div>
+        
+        <div class="nav-bottom">
+          <div class="user-info">
+            <div class="user-name" id="userName">System Administrator</div>
+            <div class="user-email" id="userEmail">admin@soraaya.ai</div>
+          </div>
+          
+          <div class="bottom-nav-item" onclick="showSettings()">
+            <div class="bottom-nav-icon">⚙️</div>
+            <span>Settings</span>
+          </div>
+          
+          <div class="bottom-nav-item logout" onclick="logout()">
+            <div class="bottom-nav-icon">🚪</div>
+            <span>Logout</span>
+          </div>
+        </div>
+      </nav>
+    </div>
+
+    <!-- Main Content -->
+    <div class="main-content">
+      <!-- Dashboard Page -->
+      <div id="dashboard" class="page active">
+        <div class="dashboard">
+          <!-- Header -->
+          <div class="header">
+            <h1>🤖 AI Lead Qualification Dashboard</h1>
+            <p>Real-time insights from your outbound calling campaigns</p>
+          </div>
+
+    <!-- Metrics Cards -->
+    <div class="metrics-grid">
+      <div class="metric-card">
+        <div class="metric-header">
+          <div class="metric-title">Total Calls Attempted</div>
+          <div class="metric-icon metric-calls">📞</div>
+        </div>
+        <div class="metric-value" id="totalCalls">-</div>
+        <div class="metric-subtitle">All outbound calls initiated</div>
+      </div>
+
+      <div class="metric-card">
+        <div class="metric-header">
+          <div class="metric-title">Calls Answered</div>
+          <div class="metric-icon metric-answered">✅</div>
+        </div>
+        <div class="metric-value" id="callsAnswered">-</div>
+        <div class="metric-subtitle" id="answeredRate">-</div>
+      </div>
+
+      <div class="metric-card">
+        <div class="metric-header">
+          <div class="metric-title">Leads Qualified</div>
+          <div class="metric-icon metric-qualified">🎯</div>
+        </div>
+        <div class="metric-value" id="leadsQualified">-</div>
+        <div class="metric-subtitle" id="qualifiedRate">-</div>
+      </div>
+
+      <div class="metric-card">
+        <div class="metric-header">
+          <div class="metric-title">Human Interventions</div>
+          <div class="metric-icon metric-interventions">👤</div>
+        </div>
+        <div class="metric-value" id="humanInterventions">-</div>
+        <div class="metric-subtitle">Calls requiring human assistance</div>
+      </div>
+    </div>
+
+    <!-- Charts Grid -->
+    <div class="charts-grid">
+      <!-- Qualification Success Rate -->
+      <div class="chart-card">
+        <div class="chart-header">
+          <div class="chart-title">Qualification Success Rate</div>
+          <div class="chart-subtitle">Percentage of answered calls that result in qualified leads</div>
+        </div>
+        <div class="gauge-container">
+          <canvas id="qualificationGauge"></canvas>
+        </div>
+      </div>
+
+      <!-- Lead Qualification Funnel -->
+      <div class="chart-card">
+        <div class="chart-header">
+          <div class="chart-title">Lead Qualification Funnel</div>
+          <div class="chart-subtitle">Progression from initial contact to qualified leads</div>
+        </div>
+        <div class="funnel-container">
+          <canvas id="funnelChart"></canvas>
+        </div>
+      </div>
+
+      <!-- Best Call Times -->
+      <div class="chart-card">
+        <div class="chart-header">
+          <div class="chart-title">Best Call Times</div>
+          <div class="chart-subtitle">Answer rates by time of day (Green = Best times, Red = Avoid)</div>
+        </div>
+        <div class="chart-container">
+          <canvas id="callTimesChart"></canvas>
+        </div>
+      </div>
+
+      <!-- Lead Source Performance -->
+      <div class="chart-card">
+        <div class="chart-header">
+          <div class="chart-title">Lead Source Performance</div>
+          <div class="chart-subtitle">Qualified vs unqualified leads by traffic source</div>
+        </div>
+        <div class="chart-container">
+          <canvas id="sourceChart"></canvas>
+        </div>
+      </div>
+    </div>
+  </div>
+  </div>
+  <!-- End Dashboard Page -->
+
+      <!-- Leads Page -->
+      <div id="leads" class="page">
+        <div class="leads-container">
+          <!-- Header -->
+          <div class="leads-header">
+            <div class="leads-title">
+              <h1>Leads</h1>
+              <p>Manage and export your qualified leads</p>
+            </div>
+            <div class="leads-actions">
+              <button class="export-btn export-qualified">
+                <span class="btn-icon">📥</span>
+                Export Qualified
+              </button>
+              <button class="export-btn export-all">
+                <span class="btn-icon">📥</span>
+                Export All
+              </button>
+            </div>
+          </div>
+
+          <!-- Filters -->
+          <div class="filters-section">
+            <div class="filters-header">
+              <span class="filter-icon">🔍</span>
+              <h3>Filters & Search</h3>
+            </div>
+            <div class="filters-row">
+              <div class="search-input">
+                <input type="text" id="leadSearch" placeholder="Search by name or phone" class="filter-input">
+              </div>
+              <div class="filter-dropdown">
+                <select id="statusFilter" class="filter-select">
+                  <option value="all">All Statuses</option>
+                  <option value="qualified">Qualified</option>
+                  <option value="unqualified">Disqualified</option>
+                  <option value="needs_review">Needs Attention</option>
+                </select>
+              </div>
+              <div class="filter-dropdown">
+                <select id="propertyFilter" class="filter-select">
+                  <option value="all">All Properties</option>
+                </select>
+              </div>
+              <div class="results-count">
+                <span id="resultsCount">Showing 0 of 0 leads</span>
+              </div>
+            </div>
+          </div>
+
+          <!-- Leads Table -->
+          <div class="leads-table-container">
+            <table class="leads-table">
+              <thead>
+                <tr>
+                  <th>Lead Name</th>
+                  <th>Phone Number</th>
+                  <th>Status</th>
+                  <th>Qualification Reason</th>
+                  <th>Property</th>
+                  <th>Date Contacted</th>
+                  <th>Actions</th>
+                </tr>
+              </thead>
+              <tbody id="leadsTableBody">
+                <!-- Leads will be populated here -->
+              </tbody>
+            </table>
+            
+            <!-- Loading State -->
+            <div id="leadsLoading" class="loading-state">
+              <div class="loading-spinner"></div>
+              <p>Loading leads...</p>
+            </div>
+            
+            <!-- Empty State -->
+            <div id="leadsEmpty" class="empty-state" style="display: none;">
+              <div class="empty-icon">👥</div>
+              <h3>No leads found</h3>
+              <p>No leads match your current filters</p>
+            </div>
+          </div>
+        </div>
+      </div>
+
+  <!-- Insights Page -->
+  <div id="insights" class="page">
+    <div class="coming-soon">
+      <div class="coming-soon-icon">📈</div>
+      <h2>Advanced Insights</h2>
+      <p>Coming soon... Deep analytics, performance trends, and AI-powered recommendations will be available here.</p>
+    </div>
+  </div>
+
+  <!-- Notifications Page -->
+  <div id="notifications" class="page">
+    <div class="coming-soon">
+      <div class="coming-soon-icon">🔔</div>
+      <h2>Notifications</h2>
+      <p>Coming soon... Real-time alerts, call notifications, and system updates will be displayed here.</p>
+    </div>
+  </div>
+</div>
+</div>
+
+  <!-- Chart.js -->
+  <script src="https://cdn.jsdelivr.net/npm/chart.js@3.9.1/dist/chart.min.js"></script>
+  
+  <script>
+    console.log('🚀 New Dashboard Loading...');
+    
+    // Check authentication on page load
+    async function checkAuth() {
+      const sessionToken = localStorage.getItem('sessionToken');
+      if (!sessionToken) {
+        window.location.href = '/login';
+        return false;
+      }
+      
+      try {
+        const response = await fetch('/api/verify-session', {
+          headers: {
+            'Authorization': `Bearer ${sessionToken}`
+          }
+        });
+        
+        if (!response.ok) {
+          localStorage.removeItem('sessionToken');
+          window.location.href = '/login';
+          return false;
+        }
+        
+        const data = await response.json();
+        console.log('✅ Authenticated user:', data.user);
+        
+        // Update UI with user info
+        updateUserInfo(data.user);
+        return true;
+      } catch (error) {
+        console.error('Auth check failed:', error);
+        localStorage.removeItem('sessionToken');
+        window.location.href = '/login';
+        return false;
+      }
+    }
+    
+    // Update UI with user information
+    function updateUserInfo(user) {
+      // Update sidebar user info
+      const userName = document.getElementById('userName');
+      const userEmail = document.getElementById('userEmail');
+      
+      if (userName && user.fullName) {
+        userName.textContent = user.fullName;
+      }
+      
+      if (userEmail && user.email) {
+        userEmail.textContent = user.email;
+      }
+      
+      // Add user info to the logo tooltip
+      const logoText = document.querySelector('.logo-text');
+      if (logoText && user.fullName) {
+        logoText.title = `Welcome, ${user.fullName}`;
+      }
+    }
+    
+    // Settings function (placeholder)
+    function showSettings() {
+      alert('Settings functionality coming soon!');
+    }
+
+    // Logout function
+    function logout() {
+      const sessionToken = localStorage.getItem('sessionToken');
+      if (sessionToken) {
+        fetch('/api/logout', {
+          method: 'POST',
+          headers: {
+            'Authorization': `Bearer ${sessionToken}`
+          }
+        }).finally(() => {
+          localStorage.removeItem('sessionToken');
+          window.location.href = '/login';
+        });
+      } else {
+        window.location.href = '/login';
+      }
+    }
+    
+    // Navigation function
+    function showPage(pageId, event) {
+      console.log('📝 Navigating to page:', pageId);
+      
+      // Update URL without page reload
+      const newUrl = pageId === 'dashboard' ? '/dashboard' : `/dashboard#${pageId}`;
+      window.history.pushState({ page: pageId }, '', newUrl);
+      
+      // Hide all pages
+      document.querySelectorAll('.page').forEach(page => {
+        page.classList.remove('active');
+      });
+      
+      // Remove active class from all nav items
+      document.querySelectorAll('.nav-item').forEach(item => {
+        item.classList.remove('active');
+      });
+      
+      // Show selected page
+      const targetPage = document.getElementById(pageId);
+      if (targetPage) {
+        targetPage.classList.add('active');
+        console.log('✅ Page', pageId, 'is now active');
+      } else {
+        console.error('❌ Page element not found:', pageId);
+      }
+      
+      // Add active class to clicked nav item
+      if (event && event.target) {
+        const navItem = event.target.closest('.nav-item');
+        if (navItem) {
+          navItem.classList.add('active');
+        }
+      }
+      
+      // Load page-specific data
+      if (pageId === 'leads') {
+        console.log('📝 Loading leads data for leads page...');
+        loadLeadsData();
+      }
+    }
+
+    // Leads Management
+    let allLeads = [];
+    let filteredLeads = [];
+    let properties = [];
+
+    async function loadLeadsData() {
+      console.log('📋 Loading leads data...');
+      
+      const loadingEl = document.getElementById('leadsLoading');
+      const tableBody = document.getElementById('leadsTableBody');
+      const emptyState = document.getElementById('leadsEmpty');
+      
+      // Show loading state
+      loadingEl.style.display = 'flex';
+      tableBody.innerHTML = '';
+      emptyState.style.display = 'none';
+      
+      try {
+        const sessionToken = localStorage.getItem('sessionToken');
+        const response = await fetch('/debug-supabase', {
+          headers: {
+            'Authorization': `Bearer ${sessionToken}`
+          }
+        });
+        
+        if (!response.ok) {
+          throw new Error('Failed to fetch leads data');
+        }
+        
+        const data = await response.json();
+        allLeads = data.recentCalls || [];
+        console.log('📊 Loaded leads data:', allLeads.length, 'leads');
+        console.log('📊 Sample lead:', allLeads[0]);
+        
+        // Extract unique properties
+        properties = [...new Set(allLeads.map(lead => lead.property_name).filter(Boolean))];
+        console.log('🏠 Found properties:', properties);
+        populatePropertyFilter();
+        
+        // Apply initial filters
+        applyFilters();
+        
+      } catch (error) {
+        console.error('Error loading leads:', error);
+        showEmptyState('Error loading leads. Please try again.');
+      } finally {
+        loadingEl.style.display = 'none';
+      }
+    }
+
+    function populatePropertyFilter() {
+      const propertyFilter = document.getElementById('propertyFilter');
+      propertyFilter.innerHTML = '<option value="all">All Properties</option>';
+      
+      properties.forEach(property => {
+        const option = document.createElement('option');
+        option.value = property;
+        option.textContent = property;
+        propertyFilter.appendChild(option);
+      });
+    }
+
+    function applyFilters() {
+      const searchTerm = document.getElementById('leadSearch').value.toLowerCase();
+      const statusFilter = document.getElementById('statusFilter').value;
+      const propertyFilter = document.getElementById('propertyFilter').value;
+      
+      filteredLeads = allLeads.filter(lead => {
+        // Search filter
+        const matchesSearch = !searchTerm || 
+          lead.contact_person?.toLowerCase().includes(searchTerm) ||
+          lead.phone_number?.toLowerCase().includes(searchTerm);
+        
+        // Status filter
+        const leadStatus = getLeadStatus(lead);
+        const matchesStatus = statusFilter === 'all' || leadStatus === statusFilter;
+        
+        // Property filter
+        const matchesProperty = propertyFilter === 'all' || lead.property_name === propertyFilter;
+        
+        return matchesSearch && matchesStatus && matchesProperty;
+      });
+      
+      console.log('🔍 Filtered leads:', filteredLeads.length, 'of', allLeads.length);
+      renderLeadsTable();
+      updateResultsCount();
+    }
+
+    function getLeadStatus(lead) {
+      // Map sentiment to lead status since lead_status field doesn't exist in current data
+      if (lead.sentiment === 'very_positive' || lead.sentiment === 'positive') {
+        return 'qualified';
+      }
+      if (lead.sentiment === 'interested' || lead.sentiment === 'cautious') {
+        return 'needs_review';
+      }
+      return 'unqualified';
+    }
+
+    function renderLeadsTable() {
+      console.log('📋 Rendering leads table with', filteredLeads.length, 'leads');
+      const tableBody = document.getElementById('leadsTableBody');
+      const emptyState = document.getElementById('leadsEmpty');
+      
+      if (!tableBody) {
+        console.error('❌ leadsTableBody element not found!');
+        return;
+      }
+      
+      if (filteredLeads.length === 0) {
+        tableBody.innerHTML = '';
+        emptyState.style.display = 'flex';
+        return;
+      }
+      
+      emptyState.style.display = 'none';
+      
+      console.log('📋 Generating HTML for', filteredLeads.length, 'leads');
+      const tableHTML = filteredLeads.map((lead, index) => {
+        console.log(`📋 Processing lead ${index + 1}:`, lead.contact_person);
+        const status = getLeadStatus(lead);
+        const statusClass = `status-${status.replace('_', '_')}`;
+        const statusText = status === 'needs_review' ? 'Needs Attention' : 
+                          status === 'qualified' ? 'Qualified' : 'Disqualified';
+        
+        const qualificationReason = getQualificationReason(lead);
+        const formattedDate = new Date(lead.created_at).toLocaleDateString();
+        
+        return `
+          <tr>
+            <td>${lead.contact_person || 'Unknown'}</td>
+            <td>${lead.phone_number || 'N/A'}</td>
+            <td>
+              <span class="status-badge ${statusClass}">${statusText}</span>
+            </td>
+            <td class="qualification-reason">
+              <div class="qualification-title">${qualificationReason.title}</div>
+              ${qualificationReason.details ? `<div class="qualification-details">${qualificationReason.details}</div>` : ''}
+            </td>
+            <td>${lead.property_name || 'N/A'}</td>
+            <td>${formattedDate}</td>
+            <td>
+              <button class="action-btn" onclick="viewLeadDetails('${lead.call_id}')" title="View Details">
+                👁️
+              </button>
+            </td>
+          </tr>
+        `;
+      }).join('');
+      
+      console.log('📋 Generated table HTML length:', tableHTML.length);
+      tableBody.innerHTML = tableHTML;
+      console.log('📋 Table HTML set successfully');
+    }
+
+    function getQualificationReason(lead) {
+      const status = getLeadStatus(lead);
+      const summary = lead.summary || '';
+      
+      if (status === 'qualified') {
+        // Extract reason from summary or notes
+        const summary = lead.summary || '';
+        if (summary.includes('3 months')) {
+          return {
+            title: 'Ready to sell within 3 months',
+            details: 'Motivated seller, owns multiple properties'
+          };
+        }
+        if (summary.includes('quick sale')) {
+          return {
+            title: 'Immediate sale needed',
+            details: 'Job relocation, needs quick sale'
+          };
+        }
+        return {
+          title: 'Qualified lead',
+          details: summary.substring(0, 50) + '...'
+        };
+      }
+      
+      if (status === 'needs_review') {
+        return {
+          title: 'Complex situation requiring human review',
+          details: 'Mentioned divorce proceedings, needs careful handling'
+        };
+      }
+      
+      // Unqualified
+      if (lead.summary?.includes('not interested')) {
+        return { title: 'Not interested', details: '' };
+      }
+      if (lead.summary?.includes('agent')) {
+        return { title: 'Already working with agent', details: '' };
+      }
+      if (lead.summary?.includes('budget')) {
+        return { title: 'No budget', details: '' };
+      }
+      
+      return { title: 'Not qualified', details: '' };
+    }
+
+    function updateResultsCount() {
+      const resultsCount = document.getElementById('resultsCount');
+      resultsCount.textContent = `Showing ${filteredLeads.length} of ${allLeads.length} leads`;
+    }
+
+    function showEmptyState(message) {
+      const emptyState = document.getElementById('leadsEmpty');
+      const emptyStateP = emptyState.querySelector('p');
+      emptyStateP.textContent = message;
+      emptyState.style.display = 'flex';
+    }
+
+    function viewLeadDetails(callId) {
+      const lead = allLeads.find(l => l.call_id === callId);
+      if (lead) {
+        alert(`Lead Details:\n\nName: ${lead.contact_person}\nPhone: ${lead.phone_number}\nProperty: ${lead.property_name}\nStatus: ${lead.lead_status}\nSummary: ${lead.summary}`);
+      }
+    }
+
+    function exportLeads(qualified = false) {
+      const leadsToExport = qualified ? 
+        filteredLeads.filter(lead => getLeadStatus(lead) === 'qualified') : 
+        filteredLeads;
+      
+      if (leadsToExport.length === 0) {
+        alert('No leads to export');
+        return;
+      }
+      
+      const csvContent = generateCSV(leadsToExport);
+      downloadCSV(csvContent, qualified ? 'qualified-leads.csv' : 'all-leads.csv');
+    }
+
+    function generateCSV(leads) {
+      const headers = ['Name', 'Phone', 'Email', 'Status', 'Property', 'Date', 'Summary'];
+      const rows = leads.map(lead => [
+        lead.contact_person || '',
+        lead.phone_number || '',
+        lead.email || '',
+        getLeadStatus(lead),
+        lead.property_name || '',
+        new Date(lead.created_at).toLocaleDateString(),
+        (lead.summary || '').replace(/,/g, ';')
+      ]);
+      
+      return [headers, ...rows].map(row => 
+        row.map(field => `"${field}"`).join(',')
+      ).join('\n');
+    }
+
+    function downloadCSV(content, filename) {
+      const blob = new Blob([content], { type: 'text/csv' });
+      const url = window.URL.createObjectURL(blob);
+      const a = document.createElement('a');
+      a.href = url;
+      a.download = filename;
+      document.body.appendChild(a);
+      a.click();
+      document.body.removeChild(a);
+      window.URL.revokeObjectURL(url);
+    }
+
+    // Event listeners for leads page
+    document.addEventListener('DOMContentLoaded', function() {
+      // Search input
+      const searchInput = document.getElementById('leadSearch');
+      if (searchInput) {
+        searchInput.addEventListener('input', applyFilters);
+      }
+      
+      // Filter dropdowns
+      const statusFilter = document.getElementById('statusFilter');
+      if (statusFilter) {
+        statusFilter.addEventListener('change', applyFilters);
+      }
+      
+      const propertyFilter = document.getElementById('propertyFilter');
+      if (propertyFilter) {
+        propertyFilter.addEventListener('change', applyFilters);
+      }
+      
+      // Export buttons
+      const exportQualified = document.querySelector('.export-qualified');
+      if (exportQualified) {
+        exportQualified.addEventListener('click', () => exportLeads(true));
+      }
+      
+      const exportAll = document.querySelector('.export-all');
+      if (exportAll) {
+        exportAll.addEventListener('click', () => exportLeads(false));
+      }
+    });
+
+    // Dashboard data and charts
+    let dashboardData = {};
+    let charts = {};
+
+    // Handle browser back/forward buttons
+    window.addEventListener('popstate', (event) => {
+      const pageId = event.state?.page || getPageFromUrl();
+      console.log('🔙 Browser navigation to:', pageId);
+      showPageWithoutHistory(pageId);
+    });
+    
+    // Get page from current URL
+    function getPageFromUrl() {
+      const hash = window.location.hash.substring(1);
+      return hash || 'dashboard';
+    }
+    
+    // Show page without updating history (for browser navigation)
+    function showPageWithoutHistory(pageId) {
+      // Hide all pages
+      document.querySelectorAll('.page').forEach(page => {
+        page.classList.remove('active');
+      });
+      
+      // Remove active class from all nav items
+      document.querySelectorAll('.nav-item').forEach(item => {
+        item.classList.remove('active');
+      });
+      
+      // Show selected page
+      const targetPage = document.getElementById(pageId);
+      if (targetPage) {
+        targetPage.classList.add('active');
+      }
+      
+      // Add active class to corresponding nav item
+      const navItems = document.querySelectorAll('.nav-item');
+      navItems.forEach(item => {
+        const onclick = item.getAttribute('onclick');
+        if (onclick && onclick.includes(`'${pageId}'`)) {
+          item.classList.add('active');
+        }
+      });
+      
+      // Load page-specific data
+      if (pageId === 'leads') {
+        loadLeadsData();
+      }
+    }
+
+    // Initialize dashboard when page loads
+    window.addEventListener('load', async () => {
+      console.log('🎆 Dashboard loaded, checking authentication...');
+      
+      // Check authentication first
+      const isAuthenticated = await checkAuth();
+      if (isAuthenticated) {
+        console.log('🎆 Authentication verified, initializing dashboard...');
+        await initializeDashboard();
+        
+        // Show the correct page based on URL
+        const initialPage = getPageFromUrl();
+        console.log('📝 Initial page from URL:', initialPage);
+        if (initialPage !== 'dashboard') {
+          showPageWithoutHistory(initialPage);
+        }
+      } else {
+        console.log('❌ Authentication failed, redirecting to login...');
+        window.location.href = '/login';
+      }
+    });
+    
+    // Initialize dashboard data and charts
+    async function initializeDashboard() {
+      try {
+        await loadData();
+        updateMetrics();
+        initializeCharts();
+        console.log('✅ Dashboard loaded successfully!');
+      } catch (error) {
+        console.error('❌ Dashboard initialization failed:', error);
+        showError('Failed to load dashboard data');
+      }
+    }
+
+    // Load data from API
+    async function loadData() {
+      console.log('📡 Fetching data from API...');
+      const response = await fetch('/debug-supabase');
+      const data = await response.json();
+      
+      const calls = data.recentCalls || [];
+      console.log(`📞 Processing ${calls.length} calls`);
+      
+      // Calculate metrics
+      dashboardData = {
+        totalCalls: calls.length,
+        callsAnswered: calls.filter(call => call.status === 'completed').length,
+        leadsQualified: calls.filter(call => call.lead_status === 'qualified').length,
+        humanInterventions: calls.filter(call => 
+          call.ended_reason === 'human-input-needed' || 
+          call.lead_status === 'needs_review'
+        ).length,
+        calls: calls
+      };
+
+      console.log('📈 Calculated metrics:', dashboardData);
+    }
+
+    // Update metric cards
+    function updateMetrics() {
+      const { totalCalls, callsAnswered, leadsQualified, humanInterventions } = dashboardData;
+      
+      document.getElementById('totalCalls').textContent = totalCalls;
+      document.getElementById('callsAnswered').textContent = callsAnswered;
+      document.getElementById('leadsQualified').textContent = leadsQualified;
+      document.getElementById('humanInterventions').textContent = humanInterventions;
+      
+      // Calculate percentages
+      const answerRate = totalCalls > 0 ? ((callsAnswered / totalCalls) * 100).toFixed(1) : 0;
+      const qualificationRate = totalCalls > 0 ? ((leadsQualified / totalCalls) * 100).toFixed(1) : 0;
+      
+      document.getElementById('answeredRate').textContent = `${answerRate}% answer rate`;
+      document.getElementById('qualifiedRate').textContent = `${qualificationRate}% of total calls`;
+    }
+
+    // Initialize all charts
+    function initializeCharts() {
+      console.log('📊 Creating charts...');
+      
+      createQualificationGauge();
+      createFunnelChart();
+      createCallTimesChart();
+      createSourceChart();
+    }
+
+    // 1. Qualification Success Rate Gauge
+    function createQualificationGauge() {
+      const ctx = document.getElementById('qualificationGauge');
+      const rate = dashboardData.callsAnswered > 0 ? 
+        ((dashboardData.leadsQualified / dashboardData.callsAnswered) * 100) : 0;
+      
+      charts.gauge = new Chart(ctx, {
+        type: 'doughnut',
+        data: {
+          datasets: [{
+            data: [rate, 100 - rate],
+            backgroundColor: ['#10b981', '#e5e7eb'],
+            borderWidth: 0,
+            cutout: '75%'
+          }]
+        },
+        options: {
+          responsive: true,
+          maintainAspectRatio: false,
+          plugins: {
+            legend: { display: false },
+            tooltip: { enabled: false }
+          }
+        },
+        plugins: [{
+          id: 'centerText',
+          beforeDraw: function(chart) {
+            const { width, height, ctx } = chart;
+            ctx.restore();
+            
+            const fontSize = Math.min(width, height) / 5;
+            ctx.font = `bold ${fontSize}px Inter`;
+            ctx.fillStyle = '#1e293b';
+            ctx.textAlign = 'center';
+            ctx.textBaseline = 'middle';
+            
+            ctx.fillText(`${rate.toFixed(1)}%`, width / 2, height / 2);
+            ctx.save();
+          }
+        }]
+      });
+    }
+
+    // 2. Lead Qualification Funnel
+    function createFunnelChart() {
+      const ctx = document.getElementById('funnelChart');
+      const { totalCalls, callsAnswered, leadsQualified } = dashboardData;
+      const unqualified = callsAnswered - leadsQualified;
+      
+      charts.funnel = new Chart(ctx, {
+        type: 'bar',
+        data: {
+          labels: ['Contacted', 'Answered', 'Qualified', 'Unqualified'],
+          datasets: [{
+            data: [totalCalls, callsAnswered, leadsQualified, unqualified],
+            backgroundColor: ['#3b82f6', '#10b981', '#f59e0b', '#ef4444'],
+            borderRadius: 8,
+            borderSkipped: false
+          }]
+        },
+        options: {
+          responsive: true,
+          maintainAspectRatio: false,
+          indexAxis: 'y',
+          plugins: {
+            legend: { display: false }
+          },
+          scales: {
+            x: { beginAtZero: true },
+            y: { ticks: { font: { size: 12 } } }
+          }
+        }
+      });
+    }
+
+    // 3. Best Call Times
+    function createCallTimesChart() {
+      const ctx = document.getElementById('callTimesChart');
+      
+      // Mock data for call times (you can replace with real data)
+      const timeSlots = ['9 AM', '10 AM', '11 AM', '12 PM', '1 PM', '2 PM', '3 PM', '4 PM', '5 PM'];
+      const answerRates = [65, 72, 85, 78, 45, 68, 82, 71, 58];
+      
+      charts.callTimes = new Chart(ctx, {
+        type: 'bar',
+        data: {
+          labels: timeSlots,
+          datasets: [{
+            label: 'Answer Rate (%)',
+            data: answerRates,
+            backgroundColor: answerRates.map(rate => 
+              rate >= 80 ? '#10b981' : rate >= 60 ? '#f59e0b' : '#ef4444'
+            ),
+            borderRadius: 6,
+            borderSkipped: false
+          }]
+        },
+        options: {
+          responsive: true,
+          maintainAspectRatio: false,
+          plugins: {
+            legend: { display: false }
+          },
+          scales: {
+            y: { 
+              beginAtZero: true,
+              max: 100,
+              title: { display: true, text: 'Answer Rate (%)' }
+            }
+          }
+        }
+      });
+    }
+
+    // 4. Lead Source Performance
+    function createSourceChart() {
+      const ctx = document.getElementById('sourceChart');
+      
+      // Mock data for lead sources (you can replace with real data)
+      charts.source = new Chart(ctx, {
+        type: 'bar',
+        data: {
+          labels: ['Website', 'Social Media', 'Referrals', 'Cold Calls'],
+          datasets: [
+            {
+              label: 'Qualified',
+              data: [45, 32, 28, 15],
+              backgroundColor: '#10b981',
+              borderRadius: 6,
+              borderSkipped: false
+            },
+            {
+              label: 'Unqualified',
+              data: [55, 68, 42, 35],
+              backgroundColor: '#ef4444',
+              borderRadius: 6,
+              borderSkipped: false
+            }
+          ]
+        },
+        options: {
+          responsive: true,
+          maintainAspectRatio: false,
+          scales: {
+            x: { stacked: true },
+            y: { 
+              stacked: true,
+              title: { display: true, text: 'Number of Leads' }
+            }
+          },
+          plugins: {
+            legend: { position: 'bottom' }
+          }
+        }
+      });
+    }
+
+    // Error handling
+    function showError(message) {
+      document.querySelector('.charts-grid').innerHTML = `
+        <div class="error">
+          <h3>⚠️ Error Loading Dashboard</h3>
+          <p>${message}</p>
+        </div>
+      `;
+    }
+  </script>
+</body>
+</html>

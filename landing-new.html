@@ -1,0 +1,240 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Soraaya AI - AI Lead Qualification Platform</title>
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+
+        body {
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+            background: #000;
+            min-height: 100vh;
+            color: white;
+            position: relative;
+            overflow: hidden;
+        }
+
+        /* Header with Sign In button */
+        .header {
+            position: absolute;
+            top: 0;
+            left: 0;
+            right: 0;
+            display: flex;
+            justify-content: flex-end;
+            padding: 30px 50px;
+            z-index: 100;
+        }
+
+        .sign-in-btn {
+            background: transparent;
+            color: white;
+            border: 2px solid rgba(255, 255, 255, 0.3);
+            padding: 12px 30px;
+            font-size: 1rem;
+            font-weight: 500;
+            border-radius: 25px;
+            cursor: pointer;
+            transition: all 0.3s ease;
+            text-decoration: none;
+            backdrop-filter: blur(10px);
+        }
+
+        .sign-in-btn:hover {
+            background: rgba(255, 255, 255, 0.1);
+            border-color: rgba(255, 255, 255, 0.5);
+            transform: translateY(-2px);
+        }
+
+        /* Main content container */
+        .main-content {
+            display: flex;
+            flex-direction: column;
+            justify-content: center;
+            align-items: center;
+            min-height: 100vh;
+            text-align: center;
+            padding: 0 50px;
+        }
+
+        .company-name {
+            font-size: 5rem;
+            font-weight: 700;
+            margin-bottom: 30px;
+            letter-spacing: -3px;
+            animation: fadeInDown 1.5s ease-out;
+        }
+
+        .hero-text {
+            font-size: 1.5rem;
+            color: rgba(255, 255, 255, 0.8);
+            font-weight: 300;
+            letter-spacing: 1px;
+            animation: fadeInUp 1.5s ease-out 0.3s both;
+        }
+
+        /* Subtle background effects */
+        body::before {
+            content: '';
+            position: absolute;
+            top: 0;
+            left: 0;
+            right: 0;
+            bottom: 0;
+            background: 
+                radial-gradient(circle at 30% 70%, rgba(102, 126, 234, 0.1) 0%, transparent 50%),
+                radial-gradient(circle at 70% 30%, rgba(118, 75, 162, 0.1) 0%, transparent 50%);
+            animation: float 20s ease-in-out infinite;
+            z-index: 1;
+        }
+
+        @keyframes float {
+            0%, 100% { transform: translateY(0px) rotate(0deg); }
+            50% { transform: translateY(-30px) rotate(2deg); }
+        }
+
+        /* Animations */
+        @keyframes fadeInDown {
+            from {
+                opacity: 0;
+                transform: translateY(-50px);
+            }
+            to {
+                opacity: 1;
+                transform: translateY(0);
+            }
+        }
+
+        @keyframes fadeInUp {
+            from {
+                opacity: 0;
+                transform: translateY(50px);
+            }
+            to {
+                opacity: 1;
+                transform: translateY(0);
+            }
+        }
+
+        /* Responsive Design */
+        @media (max-width: 768px) {
+            .header {
+                padding: 20px 30px;
+            }
+            
+            .main-content {
+                padding: 0 30px;
+            }
+            
+            .company-name {
+                font-size: 3.5rem;
+            }
+            
+            .hero-text {
+                font-size: 1.3rem;
+            }
+            
+            .sign-in-btn {
+                padding: 10px 25px;
+                font-size: 0.9rem;
+            }
+        }
+
+        @media (max-width: 480px) {
+            .header {
+                padding: 15px 20px;
+            }
+            
+            .main-content {
+                padding: 0 20px;
+            }
+            
+            .company-name {
+                font-size: 2.5rem;
+            }
+            
+            .hero-text {
+                font-size: 1.1rem;
+            }
+        }
+
+        /* Subtle floating particles */
+        .particle {
+            position: absolute;
+            background: rgba(255, 255, 255, 0.05);
+            border-radius: 50%;
+            pointer-events: none;
+            animation: floatParticle 20s infinite linear;
+        }
+
+        .particle:nth-child(1) {
+            width: 3px;
+            height: 3px;
+            left: 15%;
+            animation-delay: 0s;
+        }
+
+        .particle:nth-child(2) {
+            width: 4px;
+            height: 4px;
+            left: 25%;
+            animation-delay: 5s;
+        }
+
+        .particle:nth-child(3) {
+            width: 2px;
+            height: 2px;
+            left: 75%;
+            animation-delay: 10s;
+        }
+
+        .particle:nth-child(4) {
+            width: 5px;
+            height: 5px;
+            left: 85%;
+            animation-delay: 15s;
+        }
+
+        @keyframes floatParticle {
+            0% {
+                transform: translateY(100vh) rotate(0deg);
+                opacity: 0;
+            }
+            10% {
+                opacity: 1;
+            }
+            90% {
+                opacity: 1;
+            }
+            100% {
+                transform: translateY(-100px) rotate(360deg);
+                opacity: 0;
+            }
+        }
+    </style>
+</head>
+<body>
+    <!-- Floating particles -->
+    <div class="particle"></div>
+    <div class="particle"></div>
+    <div class="particle"></div>
+    <div class="particle"></div>
+
+    <!-- Header with Sign In button -->
+    <div class="header">
+        <a href="/login" class="sign-in-btn">Sign In</a>
+    </div>
+
+    <!-- Main content -->
+    <div class="main-content">
+        <h1 class="company-name">Soraaya AI</h1>
+        <p class="hero-text">Where Luxury Meets Intelligence</p>
+    </div>
+</body>
+</html>
