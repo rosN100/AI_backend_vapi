@@ -1,18 +1,28 @@
 {
-  "name": "twilio-outbound-quickstart-js",
-  "private": true,
-  "version": "0.0.1",
+  "name": "soraaya-ai-platform",
+  "version": "1.0.0",
+  "description": "AI-powered lead qualification platform for luxury real estate",
+  "main": "index.js",
   "type": "module",
   "scripts": {
-    "start": "node index.js"
+    "start": "NODE_ENV=production node index.js",
+    "dev": "NODE_ENV=development node index.js",
+    "test": "echo \"No tests specified\" && exit 0"
+  },
+  "keywords": ["ai", "real-estate", "lead-qualification", "vapi", "supabase"],
+  "author": "Soraaya AI Team",
+  "license": "MIT",
+  "engines": {
+    "node": ">=18.0.0",
+    "npm": ">=8.0.0"
   },
   "dependencies": {
     "@supabase/supabase-js": "^2.39.0",
-    "bcrypt": "^6.0.0",
+    "bcrypt": "^5.1.1",
     "dotenv": "^17.0.1",
     "express": "^4.18.2",
-    "googleapis": "^128.0.0",
-    "joi": "^17.9.2",
-    "node-fetch": "^3.3.1"
+    "googleapis": "^131.0.0",
+    "joi": "^17.12.1",
+    "node-fetch": "^3.3.2"
   }
 }

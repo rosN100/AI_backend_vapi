@@ -39,7 +39,8 @@ const app = express();
 app.use(express.json());
 
 // Serve static files (CSS, JS, images)
-app.use(express.static(__dirname));
+app.use('/static', express.static(path.join(__dirname, 'static')));
+app.use('/public', express.static(path.join(__dirname, 'public')));
 
 // Store property data for each call (in-memory, you might want to use a database in production)
 const callPropertyData = new Map();
@@ -172,9 +173,10 @@ function validateConfiguration() {
 }
 
 // ------------------------------------------------------------
-// VAPI call creation
+// VAPI call creation and Lead Management
 // ------------------------------------------------------------
 import { RIYA_SYSTEM_PROMPT, RIYA_INITIAL_GREETING, TODAYS_DATE } from './riya_system_prompt.js';
+import leadManager from './lead-manager.js';
 
 async function createVapiCall(propertyData) {
   console.log('Today\'s date for VAPI:', TODAYS_DATE);
@@ -547,6 +549,98 @@ function requireWebAuth(req, res, next) {
   next();
 }
 
+// Permission checking middleware
+function requirePermission(permission) {
+  return async (req, res, next) => {
+    try {
+      // Get user from request (set by requireAuth)
+      if (!req.user) {
+        return res.status(401).json({ error: 'Authentication required' });
+      }
+
+      console.log('🔍 Looking up permissions for user:', req.user.email);
+
+      // Get user profile and permissions from Supabase
+      const { data: profile, error } = await supabase
+        .from('user_profiles')
+        .select('role, can_manage_leads, can_start_campaigns, can_view_analytics, can_export_data')
+        .eq('email', req.user.email)
+        .single();
+
+      if (error) {
+        console.log('⚠️ Database error looking up user profile:', error.message);
+      }
+
+      if (!profile) {
+        console.log('⚠️ No user profile found for:', req.user.email);
+      } else {
+        console.log('✅ User profile found:', req.user.email, 'Role:', profile.role, 'Permissions:', profile);
+      }
+
+      if (error || !profile) {
+        // Special handling for admin@soraaya.ai - always grant admin permissions
+        if (req.user.email === 'admin@soraaya.ai') {
+          console.log('🔑 Admin user detected - granting full permissions');
+          req.userPermissions = {
+            role: 'admin',
+            can_manage_leads: true,
+            can_start_campaigns: true,
+            can_view_analytics: true,
+            can_export_data: true
+          };
+        } else {
+          // For other users, grant admin permissions for testing
+          console.log('🧪 Testing mode - granting admin permissions for:', req.user.email);
+          req.userPermissions = {
+            role: 'admin',
+            can_manage_leads: true,
+            can_start_campaigns: true,
+            can_view_analytics: true,
+            can_export_data: true
+          };
+        }
+      } else {
+        console.log('✅ Using database permissions for:', req.user.email);
+        req.userPermissions = profile;
+      }
+
+      // Check specific permission
+      let hasPermission = false;
+      switch (permission) {
+        case 'manage_leads':
+          hasPermission = req.userPermissions.can_manage_leads;
+          break;
+        case 'start_campaigns':
+          hasPermission = req.userPermissions.can_start_campaigns;
+          break;
+        case 'view_analytics':
+          hasPermission = req.userPermissions.can_view_analytics;
+          break;
+        case 'export_data':
+          hasPermission = req.userPermissions.can_export_data;
+          break;
+        default:
+          hasPermission = false;
+      }
+
+      if (!hasPermission) {
+        console.log(`❌ Permission denied: ${req.user.email} lacks '${permission}' permission`);
+        return res.status(403).json({ 
+          error: 'Insufficient permissions', 
+          required: permission,
+          userRole: req.userPermissions.role 
+        });
+      }
+
+      console.log(`✅ Permission granted: ${req.user.email} has '${permission}' permission`);
+      next();
+    } catch (error) {
+      console.error('Permission check error:', error);
+      res.status(500).json({ error: 'Permission check failed' });
+    }
+  };
+}
+
 
 
 // ------------------------------------------------------------
@@ -806,30 +900,212 @@ app.post('/api/logout', async (req, res) => {
 // Login page
 // Root endpoint - serve landing page
 app.get('/', (req, res) => {
-  res.sendFile(path.join(__dirname, 'landing-new.html'));
+  res.sendFile(path.join(__dirname, 'public', 'landing-new.html'));
 });
 
 app.get('/login', (req, res) => {
-  res.sendFile(path.join(__dirname, 'login.html'));
+  res.sendFile(path.join(__dirname, 'public', 'login.html'));
 });
 
 // Protected dashboard route
 app.get('/dashboard', requireWebAuth, (req, res) => {
-  res.sendFile(path.join(__dirname, 'dashboard-new.html'));
+  res.sendFile(path.join(__dirname, 'public', 'dashboard-new.html'));
 });
 
 // ------------------------------------------------------------
-// Existing routes
+// Lead Management API Endpoints
 // ------------------------------------------------------------
 
-// Legacy dashboard routes - now protected
-app.get('/clean', requireWebAuth, (req, res) => {
-  res.sendFile(path.join(__dirname, 'dashboard-clean.html'));
+// Get leads for calling
+app.get('/api/leads', requireAuth, requirePermission('view_analytics'), async (req, res) => {
+  try {
+    const limit = parseInt(req.query.limit) || 50;
+    const leads = await leadManager.getLeadsForCalling(limit);
+    res.json({ success: true, leads, count: leads.length });
+  } catch (error) {
+    console.error('Error fetching leads:', error);
+    res.status(500).json({ error: error.message });
+  }
 });
 
-app.get('/new', requireWebAuth, (req, res) => {
-  res.sendFile(path.join(__dirname, 'dashboard-new.html'));
+// Start automated calling process
+app.post('/api/start-calling', requireAuth, requirePermission('start_campaigns'), async (req, res) => {
+  try {
+    const { leadLimit = 20 } = req.body;
+    console.log(`🚀 Starting automated calling for ${leadLimit} leads`);
+    
+    const result = await leadManager.startAutomatedCalling(leadLimit);
+    
+    if (result.error) {
+      return res.status(400).json(result);
+    }
+    
+    res.json({
+      success: true,
+      message: 'Automated calling started',
+      ...result
+    });
+  } catch (error) {
+    console.error('Error starting automated calling:', error);
+    res.status(500).json({ error: error.message });
+  }
 });
+
+// Get active call statistics
+app.get('/api/call-stats', requireAuth, (req, res) => {
+  try {
+    const stats = leadManager.getActiveCallStats();
+    res.json({ success: true, stats });
+  } catch (error) {
+    console.error('Error getting call stats:', error);
+    res.status(500).json({ error: error.message });
+  }
+});
+
+// Get user permissions
+app.get('/api/user-permissions', requireAuth, async (req, res) => {
+  try {
+    const { data: profile, error } = await supabase
+      .from('user_profiles')
+      .select('role, can_manage_leads, can_start_campaigns, can_view_analytics, can_export_data')
+      .eq('email', req.user.email)
+      .single();
+
+    if (error || !profile) {
+      // Default to admin for testing if no profile found
+      const defaultPermissions = {
+        role: 'admin',
+        can_manage_leads: true,
+        can_start_campaigns: true,
+        can_view_analytics: true,
+        can_export_data: true
+      };
+      return res.json({ success: true, permissions: defaultPermissions });
+    }
+
+    res.json({ success: true, permissions: profile });
+  } catch (error) {
+    console.error('Error getting user permissions:', error);
+    res.status(500).json({ error: error.message });
+  }
+});
+
+// Update test data (for testing purposes only)
+app.post('/api/update-test-data', requireAuth, requirePermission('manage_leads'), async (req, res) => {
+  try {
+    const testPhoneNumber = '+918884154540';
+    
+    console.log('🧪 Setting up test data...');
+    
+    // Update all leads with test phone number
+    const { error: phoneUpdateError } = await supabase
+      .from('leads')
+      .update({ phone_number: testPhoneNumber })
+      .neq('phone_number', null);
+    
+    if (phoneUpdateError) {
+      throw new Error('Failed to update phone numbers: ' + phoneUpdateError.message);
+    }
+    
+    // Set all leads to 'not_interested' first
+    const { error: statusUpdateError } = await supabase
+      .from('leads')
+      .update({ 
+        status: 'not_interested',
+        last_call_result: 'Set for testing - not interested',
+        updated_at: new Date().toISOString()
+      })
+      .neq('status', null);
+    
+    if (statusUpdateError) {
+      throw new Error('Failed to update statuses: ' + statusUpdateError.message);
+    }
+    
+    // Get the first lead to set as 'to_call'
+    const { data: firstLead, error: firstLeadError } = await supabase
+      .from('leads')
+      .select('id')
+      .order('created_at', { ascending: true })
+      .limit(1)
+      .single();
+    
+    if (firstLeadError || !firstLead) {
+      throw new Error('Failed to get first lead: ' + (firstLeadError?.message || 'No leads found'));
+    }
+    
+    // Set first lead to 'to_call' status
+    const { error: firstLeadUpdateError } = await supabase
+      .from('leads')
+      .update({
+        status: 'to_call',
+        follow_up_count: 0,
+        last_call_result: null,
+        callback_scheduled_at: null,
+        last_contacted: null,
+        call_completed_at: null,
+        updated_at: new Date().toISOString()
+      })
+      .eq('id', firstLead.id);
+    
+    if (firstLeadUpdateError) {
+      throw new Error('Failed to update first lead: ' + firstLeadUpdateError.message);
+    }
+    
+    // Get updated counts
+    const { data: statusCounts, error: countError } = await supabase
+      .from('leads')
+      .select('status')
+      .then(result => {
+        if (result.error) return { data: null, error: result.error };
+        const counts = {};
+        result.data.forEach(lead => {
+          counts[lead.status] = (counts[lead.status] || 0) + 1;
+        });
+        return { data: counts, error: null };
+      });
+    
+    console.log('✅ Test data updated successfully');
+    
+    res.json({
+      success: true,
+      message: 'Test data updated successfully',
+      testPhoneNumber: testPhoneNumber,
+      statusCounts: statusCounts || {},
+      firstLeadId: firstLead.id
+    });
+    
+  } catch (error) {
+    console.error('Error updating test data:', error);
+    res.status(500).json({ error: error.message });
+  }
+});
+
+// Update lead status manually
+app.put('/api/leads/:leadId/status', requireAuth, requirePermission('manage_leads'), async (req, res) => {
+  try {
+    const { leadId } = req.params;
+    const { status, notes } = req.body;
+    
+    const success = await leadManager.updateLeadStatus(leadId, status, null, {
+      notes: notes || undefined,
+      manual_update: true,
+      updated_by: req.user?.id
+    });
+    
+    if (success) {
+      res.json({ success: true, message: 'Lead status updated' });
+    } else {
+      res.status(400).json({ error: 'Failed to update lead status' });
+    }
+  } catch (error) {
+    console.error('Error updating lead status:', error);
+    res.status(500).json({ error: error.message });
+  }
+});
+
+// ------------------------------------------------------------
+// Additional routes
+// ------------------------------------------------------------
 
 // Debug endpoint to check Google Sheets structure
 app.get('/debug-sheet', async (req, res) => {
@@ -958,56 +1234,21 @@ app.post('/post-call-results', async (req, res) => {
     return res.status(400).json({ error: error.details[0].message });
   }
 
-  // Extract call data from VAPI format or legacy format
-  let callData;
-  if (req.body.message && req.body.message.call) {
-    // VAPI format
-    const call = req.body.message.call;
-    callData = {
-      callId: call.id,
-      status: call.status,
-      endedReason: call.endedReason,
-      transcript: call.transcript || '',
-      recordingUrl: call.recordingUrl || '',
-      summary: call.summary || '',
-      cost: call.cost,
-      duration: call.updatedAt ? new Date(call.updatedAt) - new Date(call.createdAt) : null,
-      analysis: call.analysis
-    };
-  } else {
-    // Legacy format (backward compatibility)
-    callData = {
-      candidateId: req.body.candidateId,
-      callStatus: req.body.callStatus,
-      candidateResponse: req.body.candidateResponse,
-      scheduledTime: req.body.scheduledTime,
-      followUpRequired: req.body.followUpRequired,
-      callRecordingUrl: req.body.callRecordingUrl,
-      transcript: req.body.transcript
-    };
+  try {
+    // Use lead manager to handle call completion
+    const success = await leadManager.handleCallCompletion(req.body);
+    
+    if (success) {
+      console.log('✅ Call completion processed successfully');
+      res.json({ status: 'received', success: true });
+    } else {
+      console.log('⚠️ Call completion processing failed');
+      res.status(400).json({ status: 'error', message: 'Failed to process call completion' });
+    }
+  } catch (error) {
+    console.error('❌ Error processing call completion:', error);
+    res.status(500).json({ status: 'error', message: error.message });
   }
-  
-  console.log('Processed call data:', callData);
-  
-  // Get stored property data for this call
-  const propertyData = callPropertyData.get(callData.callId);
-  if (propertyData) {
-    console.log('Found stored property data for call:', callData.callId);
-    
-    // Store in Supabase (primary database)
-    await storeCallInSupabase(callData, propertyData);
-    
-    // Clean up stored data
-    callPropertyData.delete(callData.callId);
-  } else {
-    console.log('No stored property data found for call:', callData.callId);
-    
-    // Still try to store in Supabase without property data
-    await storeCallInSupabase(callData, null);
-  }
-  
-  await postResultsToN8n(callData);
-  res.json({ status: 'received' });
 });
 
 app.listen(PORT, () => {

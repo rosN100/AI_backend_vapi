@@ -1,269 +1,271 @@
-# VAPI Outbound Call API
+# Soraaya AI Lead Qualification Dashboard with VAPI Integration
 
-This project exposes a simple Express server that integrates with VAPI to place outbound phone calls. It is designed to work with an n8n workflow and provides two REST endpoints.
+A comprehensive lead management and qualification system powered by AI voice calls through VAPI integration. This system now includes automated lead calling, real-time call management, and integrated backend processing that eliminates the need for external N8N workflows.
 
-## Endpoints
+## Features
 
-| Method | Endpoint          | Description                                               |
-| ------ | ----------------- | --------------------------------------------------------- |
-| POST   | `/trigger-call`   | Receive candidate data from n8n and initiate the call.    |
-| POST   | `/post-call-results` | Receive call results and forward them to the n8n workflow. |
+### Core Features
+- **AI-Powered Lead Qualification**: Intelligent conversation analysis and lead scoring
+- **Real-time Dashboard**: Comprehensive analytics and lead management interface
+- **Secure Authentication**: User management with session-based authentication
+- **Responsive Design**: Modern, mobile-friendly interface optimized for luxury real estate
+- **Integration Ready**: Seamless integration with VAPI, Supabase, and Google Sheets
 
-## Setup
+### New Lead Management System
+- **🚀 Automated Lead Calling**: Batch process leads with configurable concurrency limits
+- **📞 Real-time Call Management**: Monitor active calls, queue status, and completion rates
+- **🎯 Intelligent Lead Routing**: Automatically prioritize and route leads based on status
+- **🔄 Retry Logic**: Automatic retry for failed calls with exponential backoff
+- **📊 Live Statistics**: Real-time updates on call progress and completion
+- **⚡ Concurrency Control**: Maximum 4 simultaneous calls to prevent API rate limiting
+- **🔗 Direct VAPI Integration**: No external N8N workflow required
+- **📈 Advanced Analytics**: Detailed call metrics and lead qualification tracking
 
-1. Install dependencies:
+## Project Structure
+
+```
+├── public/                 # Frontend HTML files
+│   ├── landing-new.html   # Landing page
+│   ├── login.html         # Authentication page
+│   └── dashboard-new.html # Main dashboard
+├── static/                # Static assets (CSS, JS, images)
+├── data/                  # Database schemas and sample data
+│   ├── supabase-schema.sql
+│   ├── user-schema.sql
+│   ├── leads-schema.sql   # NEW: Lead management schema
+│   ├── user-permissions-schema.sql # NEW: User permissions system
+│   └── *.csv files
+├── docs/                  # Documentation
+├── index.js              # Main server file
+├── lead-manager.js       # NEW: Lead management system
+├── riya_system_prompt.js # AI prompt configuration
+└── package.json          # Dependencies
+```
+
+## Quick Start
+
+1. **Install Dependencies**
    ```bash
    npm install
    ```
-2. Create a `.env` file and add your VAPI credentials.
-3. Start the server:
+
+2. **Environment Setup**
+   - Copy `.env.example` to `.env`
+   - Configure your API keys and database credentials
+
+3. **Database Setup**
+   - Import schemas from `data/` folder to your Supabase instance
+   - Configure authentication tables
+
+4. **Start Server**
    ```bash
-   npm start
+   node index.js
    ```
 
-The server validates incoming payloads using **Joi** and uses VAPI for voice call management.
+5. **Access Application**
+   - Landing Page: `http://localhost:3000`
+   - Login: `http://localhost:3000/login`
+   - Dashboard: `http://localhost:3000/dashboard`
 
-## Environment Variables
+## Configuration
 
-Required environment variables:
+### Required Environment Variables
 
-- `VAPI_API_KEY` – VAPI API key for authentication
-- `VAPI_ASSISTANT_ID` – VAPI Assistant ID to use for calls
-- `VAPI_PHONE_NUMBER_ID` – VAPI Phone Number ID for outbound calls
-- `N8N_RESULTS_URL` – n8n webhook to receive post‑call results
-
-# Google Sheets Integration (Optional)
-- `GOOGLE_SHEETS_PRIVATE_KEY` – Google Sheets private key
-- `GOOGLE_SHEETS_CLIENT_EMAIL` – Google Sheets client email
-- `GOOGLE_SHEETS_SPREADSHEET_ID` – Google Sheets spreadsheet ID
-
-# Supabase Integration (Optional)
-- `SUPABASE_URL` – Supabase project URL
-- `SUPABASE_ANON_KEY` – Supabase anon key
-- `SUPABASE_SERVICE_ROLE_KEY` – Supabase service role key
-
-## Usage
-
-Send a POST request to `/trigger-call` with property data from your CRM:
-
-**⚠️ IMPORTANT: Make sure your URL ends with `/trigger-call`**
-- ✅ Correct: `https://your-domain.com/trigger-call`
-- ❌ Wrong: `https://your-domain.com/` (will cause 404 error)
-
-```json
-{
-  "property_id": "LP001",
-  "property_name": "Oberoi Sky City",
-  "location": "Borivali East",
-  "area_sqft": 1850,
-  "bedrooms": 3,
-  "bathrooms": 3,
-  "price_crores": 4.2,
-  "price_per_sqft": 22703,
-  "property_type": "Apartment",
-  "builder": "Oberoi Realty",
-  "possession_status": "Ready to Move",
-  "amenities": "Swimming Pool, Gym, Club House, Security",
-  "contact_person": "Rajesh Sharma",
-  "phone_number": "918884154540",
-  "email": "rajesh.sharma@email.com",
-  "lead_status": "Hot Lead",
-  "last_contacted": "2025-01-15",
-  "notes": "Interested in 3BHK"
-}
+```env
+PORT=3000
+VAPI_API_KEY=your_vapi_key
+VAPI_ASSISTANT_ID=your_assistant_id
+VAPI_PHONE_NUMBER_ID=your_phone_id
+SUPABASE_URL=your_supabase_url
+SUPABASE_SERVICE_ROLE_KEY=your_service_key
+GOOGLE_SHEETS_PRIVATE_KEY=your_sheets_key
+GOOGLE_SHEETS_CLIENT_EMAIL=your_client_email
+GOOGLE_SHEETS_SPREADSHEET_ID=your_spreadsheet_id
 ```
 
-## Troubleshooting
+## API Endpoints
 
-### Common Error: "Cannot POST /"
-If you get a 404 error with "Cannot POST /", check your n8n HTTP Request node:
-1. Make sure the URL ends with `/trigger-call`
-2. Set Content-Type header to `application/json`
-3. Enable "Send Body" and set to JSON format
+### Authentication
+- `POST /api/login` - User login
+- `POST /api/logout` - User logout
+- `GET /api/verify-session` - Session verification
 
-### Phone Number Format Error
-If you get "customer.number must be a valid phone number in the E.164 format":
-- The server automatically formats Indian phone numbers
-- Supported formats:
-  - `"918884154540"` → `"+918884154540"` ✅
-  - `"8884154540"` → `"+918884154540"` ✅  
-  - `"+918884154540"` → `"+918884154540"` ✅
-  - `"91-888-415-4540"` → `"+918884154540"` ✅
+### Lead Management (Legacy)
+- `POST /trigger-call` - Initiate VAPI call
+- `POST /post-call-results` - Receive call results webhook
+- `GET /debug-supabase` - Debug database connection
 
-### Testing the API
-You can test if the server is running by visiting the root URL in your browser:
-- `https://your-domain.com/` - Should show server status
+### New Lead Management API
+- `GET /api/leads` - Get leads for calling (with pagination) *[requires: view_analytics]*
+- `POST /api/start-calling` - Start automated calling campaign *[requires: start_campaigns]*
+- `GET /api/call-stats` - Get real-time call statistics
+- `GET /api/user-permissions` - Get current user's permissions
+- `PUT /api/leads/:leadId/status` - Update lead status manually *[requires: manage_leads]*
 
-## VAPI Webhook Response Schema
+### Pages
+- `GET /` - Landing page
+- `GET /login` - Login page
+- `GET /dashboard` - Main dashboard (protected)
 
-After a call ends, VAPI sends a webhook to your `/post-call-results` endpoint with the following structure:
+## Usage Guide
 
-```json
-{
-  "message": {
-    "type": "call-ended",
-    "call": {
-      "id": "call_abc123def456",
-      "orgId": "org_xyz789",
-      "createdAt": "2025-01-15T10:30:45.123Z",
-      "updatedAt": "2025-01-15T10:35:12.456Z",
-      "type": "outboundPhoneCall",
-      "status": "ended",
-      "phoneNumberId": "phone_123",
-      "customerId": null,
-      "assistantId": "asst_456",
-      "endedReason": "customer-ended-call",
-      "cost": 0.25,
-      "transcript": "Hello, I'm calling about the property...",
-      "recordingUrl": "https://storage.vapi.ai/recordings/call_abc123.mp3",
-      "summary": "Customer showed interest in 3BHK apartment",
-      "analysis": {
-        "sentiment": "positive",
-        "intent": "interested",
-        "keyTopics": ["budget", "location", "amenities"]
-      }
-    }
-  }
-}
-```
+### Setting Up Leads
 
-### Key Fields You'll Receive:
-
-- **`call.id`** - Unique call identifier
-- **`call.status`** - Call status ("ended", "failed", etc.)
-- **`call.endedReason`** - Why the call ended ("customer-ended-call", "assistant-ended-call", etc.)
-- **`call.transcript`** - Full conversation transcript
-- **`call.recordingUrl`** - URL to download call recording (if enabled)
-- **`call.summary`** - AI-generated call summary
-- **`call.cost`** - Cost of the call in USD
-- **`call.analysis`** - AI analysis of the conversation (sentiment, intent, etc.)
-- **`call.createdAt/updatedAt`** - Timestamps for call duration calculation
-
-### Processed Data Sent to n8n:
-
-The server processes the VAPI webhook and sends this cleaned data to your n8n workflow:
-
-```json
-{
-  "callId": "call_abc123def456",
-  "status": "ended",
-  "endedReason": "customer-ended-call",
-  "transcript": "Hello, I'm calling about the property...",
-  "recordingUrl": "https://storage.vapi.ai/recordings/call_abc123.mp3",
-  "summary": "Customer showed interest in 3BHK apartment",
-  "cost": 0.25,
-  "duration": 267000,
-  "analysis": {
-    "sentiment": "positive",
-    "intent": "interested",
-    "keyTopics": ["budget", "location", "amenities"]
-  }
-}
-```
-
-## How Property Context is Passed to VAPI
-
-## Google Sheets Integration
-
-The system automatically updates your Google Sheet with call results after each call ends. The following fields are updated:
-
-- **endedReason** - Why the call ended (customer-ended-call, etc.)
-- **transcript** - Full conversation transcript
-- **recordingUrl** - Link to call recording
-- **summary** - AI-generated call summary
-- **sentiment** - Conversation sentiment (positive, negative, neutral)
-- **intent** - Customer intent (interested, not-interested, etc.)
-- **callStatus** - Call status (ended, failed, etc.)
-- **callCost** - Cost of the call in USD
-- **callDuration** - Call duration in seconds
-- **lastUpdated** - Timestamp of last update
-
-### Setup Instructions
-
-📋 **See [google-sheets-setup.md](./google-sheets-setup.md) for complete setup instructions**
-
-### Quick Setup:
-1. Create a Google Cloud service account
-2. Enable Google Sheets API
-3. Share your sheet with the service account email
-4. Add credentials to your `.env` file
-
-**Your Google Sheet**: https://docs.google.com/spreadsheets/d/1VJoRrxpzeNYEp8IVgMglj79Abc04OZ9Al1nUPi3mK2w/edit
-
-## Supabase Integration (Recommended for Production)
-
-For production use, the system can store call data in a Supabase PostgreSQL database alongside Google Sheets.
-
-### Benefits of Supabase:
-- **Better Performance**: Direct database queries vs API rate limits
-- **Rich Data Types**: Proper data types instead of text-only
-- **Advanced Querying**: Full SQL support for analytics
-- **Real-time Updates**: Live data subscriptions
-- **Scalability**: Handle thousands of calls efficiently
-
-### Setup Instructions:
-
-1. **Get your Supabase credentials** from your project dashboard:
-   - Go to Settings → API
-   - Copy Project URL, Anon Key, and Service Role Key
-
-2. **Create the database table**:
-   - Go to SQL Editor in Supabase
-   - Run the SQL from `supabase-schema.sql`
-
-3. **Add to your `.env` file**:
-   ```env
-   SUPABASE_URL="https://your-project.supabase.co"
-   SUPABASE_SERVICE_ROLE_KEY="your-service-role-key"
+1. **Database Setup**: First, run the leads schema to create the leads table:
+   ```sql
+   -- Run the SQL from data/leads-schema.sql in your Supabase database
    ```
 
-### Data Storage Strategy:
+2. **Sample Data**: The schema includes sample luxury real estate leads to get started
 
-- **Supabase**: Primary database for structured data and analytics
-- **Google Sheets**: Backup/manual view for non-technical team members
-- **Both systems updated automatically** after each call
+### Using the Lead Management System
 
-### Database Schema:
+#### Dashboard Overview
+- **Metrics Cards**: View total calls, answer rates, qualified leads, and interventions
+- **Control Panel**: Start automated calling campaigns and monitor progress
+- **Real-time Stats**: Active calls, queued calls, and daily completion counts
 
-The `vapi_calls` table stores:
-- Call metadata (ID, status, duration, cost)
-- AI analysis (transcript, summary, sentiment, intent)
-- Property information (name, location, price, amenities)
-- Lead information (contact details, status, notes)
-- Timestamps for tracking
+#### Starting a Calling Campaign
 
-## How Property Context is Passed to VAPI
+1. **Access Dashboard**: Navigate to the main dashboard after login
+2. **Lead Management Panel**: Find the "📞 Lead Calling Management" section
+3. **Configure Campaign**:
+   - Set number of leads to call (1-50)
+   - Click "🚀 Start Calling Campaign"
+4. **Monitor Progress**: Watch real-time updates of active and completed calls
 
-The system uses VAPI's **dynamic variables** feature to pass property data as context to the AI assistant:
+#### API Usage Examples
 
-1. **Variable Values**: All property data is passed via `assistantOverrides.variableValues`
-2. **System Prompt**: The assistant's system prompt uses variables like `{{property_name}}`, `{{contact_person}}`, etc.
-3. **First Message**: Dynamically generated greeting with property-specific information
-4. **Real-time Context**: The assistant has access to all property details during the conversation
-
-### Available Variables in Assistant:
-- `{{contact_person}}` - Lead's name
-- `{{property_name}}` - Property name
-- `{{location}}` - Property location
-- `{{price_crores}}` - Property price
-- `{{bedrooms}}`, `{{bathrooms}}` - Property specs
-- `{{amenities}}` - Property amenities
-- `{{lead_status}}` - Current lead status
-- `{{notes}}` - Previous interaction notes
-
-After the call completes, post the results to `/post-call-results`:
-
-```json
-{
-  "candidateId": "string",
-  "callStatus": "string",
-  "candidateResponse": "string",
-  "scheduledTime": "string",
-  "followUpRequired": true,
-  "callRecordingUrl": "string",
-  "transcript": "string"
-}
+**Start Automated Calling**:
+```javascript
+fetch('/api/start-calling', {
+  method: 'POST',
+  headers: { 'Content-Type': 'application/json' },
+  body: JSON.stringify({ leadLimit: 10 })
+})
 ```
 
-The server will forward these results to the `N8N_RESULTS_URL`.
+**Get Call Statistics**:
+```javascript
+fetch('/api/call-stats')
+  .then(response => response.json())
+  .then(data => console.log(data.stats))
+```
 
+**Update Lead Status**:
+```javascript
+fetch('/api/leads/123/status', {
+  method: 'PUT',
+  headers: { 'Content-Type': 'application/json' },
+  body: JSON.stringify({ 
+    status: 'qualified', 
+    notes: 'Interested in luxury properties' 
+  })
+})
+```
+
+### Key Features Explained
+
+#### Concurrency Control
+- Maximum 4 simultaneous calls to prevent VAPI rate limiting
+- Automatic queuing system for additional leads
+- Smart retry logic for failed calls
+
+#### Lead Status Management
+
+**📞 Active/Processing Statuses:**
+- **to_call**: Fresh lead, ready for calling (default status)
+- **calling**: Currently being processed (part of active batch)
+- **in_call**: Active call in progress with VAPI
+
+**🔄 Follow-up Statuses:**
+- **follow_up**: Lead couldn't be reached (allows up to 3 attempts)
+- **callback_requested**: Lead specifically requested callback
+
+**✅ Final Resolution Statuses:**
+- **qualified**: Successfully qualified lead (FINAL)
+- **not_interested**: Lead declined/not interested (FINAL)
+- **unresponsive**: No response after 3 follow-up attempts (FINAL)
+
+**⚠️ Human Intervention Statuses:**
+- **human_follow_up**: Requires manual follow-up action
+- **human_input_needed**: Requires human review/intervention
+
+**🔧 Technical Status:**
+- **call_failed**: Technical call failure (will be retried)
+
+**📊 Campaign Flow:**
+```
+[to_call/follow_up/callback_requested/call_failed] 
+                ↓
+        (user starts campaign)
+                ↓
+            calling (batch processing)
+                ↓
+            in_call (active VAPI call)
+                ↓
+    [qualified/not_interested/follow_up/unresponsive/etc.]
+```
+
+#### User Permission System
+
+**Admin Users** have access to:
+- ✅ Dashboard analytics and metrics
+- ✅ Lead management and status updates
+- ✅ Start automated calling campaigns
+- ✅ Export lead data
+- ✅ View all system features
+
+**General Users** have access to:
+- ✅ Dashboard analytics and metrics
+- ✅ Export lead data
+- ❌ Lead management (view only)
+- ❌ Cannot start calling campaigns
+- ❌ Cannot modify lead statuses
+
+**Setting Up Permissions:**
+```sql
+-- Run this to promote a user to admin
+SELECT public.promote_user_to_admin('user@example.com');
+
+-- Or manually update user_profiles table
+UPDATE user_profiles 
+SET role = 'admin', can_manage_leads = true, can_start_campaigns = true 
+WHERE email = 'user@example.com';
+```
+
+#### Webhook Processing
+- Automatic call completion handling
+- Lead status updates based on call results
+- Transcript and summary storage
+- Qualification scoring integration
+
+## Production Deployment
+
+1. **Environment Setup**
+   - Ensure all environment variables are configured
+   - Use production database credentials
+   - Enable HTTPS
+
+2. **Security**
+   - Update CORS settings for production domain
+   - Configure proper session management
+   - Enable rate limiting
+
+3. **Monitoring**
+   - Set up logging and error tracking
+   - Configure health checks
+   - Monitor API usage
+
+## Technology Stack
+
+- **Backend**: Node.js, Express.js
+- **Database**: Supabase (PostgreSQL)
+- **Authentication**: Session-based with Supabase
+- **AI Integration**: VAPI for voice calls
+- **Frontend**: Vanilla HTML/CSS/JavaScript
+- **Data Storage**: Google Sheets integration
+
+## Support
+
+For technical support or questions, please refer to the documentation in the `docs/` folder or contact the development team.

@@ -615,6 +615,191 @@
       color: #6b7280;
     }
 
+    /* Control Panel Styles */
+    .control-panel {
+      background: white;
+      border-radius: 12px;
+      padding: 24px;
+      margin-bottom: 24px;
+      box-shadow: 0 1px 3px rgba(0, 0, 0, 0.1);
+    }
+
+    .control-header {
+      margin-bottom: 24px;
+    }
+
+    .control-header h2 {
+      color: #1f2937;
+      font-size: 1.25rem;
+      font-weight: 600;
+      margin: 0 0 4px 0;
+    }
+
+    .control-header p {
+      color: #6b7280;
+      margin: 0;
+      font-size: 0.875rem;
+    }
+
+    .control-grid {
+      display: grid;
+      grid-template-columns: 1fr 1fr;
+      gap: 24px;
+    }
+
+    .control-card {
+      background: #f8fafc;
+      border-radius: 8px;
+      padding: 20px;
+      border: 1px solid #e2e8f0;
+    }
+
+    .control-title {
+      font-weight: 600;
+      color: #374151;
+      margin-bottom: 16px;
+      font-size: 1rem;
+    }
+
+    .control-stats {
+      display: flex;
+      flex-direction: column;
+      gap: 12px;
+    }
+
+    .stat-item {
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+    }
+
+    .stat-label {
+      color: #6b7280;
+      font-size: 0.875rem;
+    }
+
+    .stat-value {
+      font-weight: 600;
+      color: #1f2937;
+      font-size: 1.125rem;
+    }
+
+    .control-form {
+      display: flex;
+      flex-direction: column;
+      gap: 16px;
+    }
+
+    .form-group {
+      display: flex;
+      flex-direction: column;
+      gap: 8px;
+    }
+
+    .form-group label {
+      font-weight: 500;
+      color: #374151;
+      font-size: 0.875rem;
+    }
+
+    .form-group input {
+      padding: 8px 12px;
+      border: 1px solid #d1d5db;
+      border-radius: 6px;
+      font-size: 0.875rem;
+      transition: border-color 0.2s ease;
+    }
+
+    .form-group input:focus {
+      outline: none;
+      border-color: #8b5cf6;
+      box-shadow: 0 0 0 3px rgba(139, 92, 246, 0.1);
+    }
+
+    .btn {
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      gap: 8px;
+      padding: 12px 20px;
+      border: none;
+      border-radius: 8px;
+      font-weight: 500;
+      cursor: pointer;
+      transition: all 0.2s ease;
+      font-size: 0.875rem;
+      text-decoration: none;
+    }
+
+    .btn-primary {
+      background: linear-gradient(135deg, #8b5cf6 0%, #7c3aed 100%);
+      color: white;
+    }
+
+    .btn-primary:hover {
+      transform: translateY(-1px);
+      box-shadow: 0 4px 12px rgba(139, 92, 246, 0.3);
+    }
+
+    .btn-primary:disabled {
+      background: #9ca3af;
+      cursor: not-allowed;
+      transform: none;
+      box-shadow: none;
+    }
+
+    .btn-secondary {
+      background: #6b7280;
+      color: white;
+    }
+
+    .btn-secondary:hover {
+      background: #4b5563;
+      transform: translateY(-1px);
+      box-shadow: 0 4px 12px rgba(107, 114, 128, 0.3);
+    }
+
+    .btn-secondary:disabled {
+      background: #9ca3af;
+      cursor: not-allowed;
+      transform: none;
+      box-shadow: none;
+    }
+
+    .btn-icon {
+      font-size: 1rem;
+    }
+
+    .control-status {
+      margin-top: 12px;
+      padding: 8px 12px;
+      border-radius: 6px;
+      font-size: 0.875rem;
+      font-weight: 500;
+      display: none;
+    }
+
+    .control-status.success {
+      background: #d1fae5;
+      color: #065f46;
+      border: 1px solid #a7f3d0;
+      display: block;
+    }
+
+    .control-status.error {
+      background: #fee2e2;
+      color: #991b1b;
+      border: 1px solid #fca5a5;
+      display: block;
+    }
+
+    .control-status.info {
+      background: #dbeafe;
+      color: #1e40af;
+      border: 1px solid #93c5fd;
+      display: block;
+    }
+
     @media (max-width: 768px) {
       .sidebar {
         width: 240px;
@@ -631,6 +816,11 @@
       
       .metrics-grid {
         grid-template-columns: repeat(auto-fit, minmax(250px, 1fr));
+      }
+      
+      .control-grid {
+        grid-template-columns: 1fr;
+        gap: 16px;
       }
 
       .coming-soon-icon {
@@ -751,6 +941,54 @@
         </div>
         <div class="metric-value" id="humanInterventions">-</div>
         <div class="metric-subtitle">Calls requiring human assistance</div>
+      </div>
+    </div>
+
+    <!-- Lead Management Control Panel -->
+    <div class="control-panel">
+      <div class="control-header">
+        <h2>📞 Lead Calling Management</h2>
+        <p>Automated lead calling with VAPI integration</p>
+      </div>
+      
+      <div class="control-grid">
+        <div class="control-card">
+          <div class="control-title">Active Calls</div>
+          <div class="control-stats">
+            <div class="stat-item">
+              <span class="stat-label">Currently Active:</span>
+              <span class="stat-value" id="activeCalls">0</span>
+            </div>
+            <div class="stat-item">
+              <span class="stat-label">Queued:</span>
+              <span class="stat-value" id="queuedCalls">0</span>
+            </div>
+            <div class="stat-item">
+              <span class="stat-label">Completed Today:</span>
+              <span class="stat-value" id="completedToday">0</span>
+            </div>
+          </div>
+        </div>
+        
+        <div class="control-card">
+          <div class="control-title">Start Automated Calling</div>
+          <div class="control-form">
+            <div class="form-group">
+              <label for="leadLimit">Number of leads to call:</label>
+              <input type="number" id="leadLimit" value="1" min="1" max="50">
+            </div>
+            <button id="startCallingBtn" class="btn btn-primary">
+              <span class="btn-icon">🚀</span>
+              Start Calling Campaign
+            </button>
+            <button id="setupTestDataBtn" class="btn btn-secondary" style="margin-top: 12px;">
+              <span class="btn-icon">🧪</span>
+              Setup Test Data
+            </button>
+          </div>
+          <div class="control-status" id="callingStatus"></div>
+          <div class="control-status" id="testDataStatus"></div>
+        </div>
       </div>
     </div>
 
@@ -1380,6 +1618,218 @@
       }
     }
 
+    // Lead Management Functions
+    let callStatsInterval;
+    let userPermissions = null;
+
+    async function loadCallStats() {
+      try {
+        const response = await fetch('/api/call-stats', {
+          credentials: 'include'
+        });
+        const data = await response.json();
+        
+        if (data.success) {
+          const stats = data.stats;
+          document.getElementById('activeCalls').textContent = stats.activeCalls || 0;
+          document.getElementById('queuedCalls').textContent = stats.queuedCalls || 0;
+          document.getElementById('completedToday').textContent = stats.completedToday || 0;
+        }
+      } catch (error) {
+        console.error('Error loading call stats:', error);
+      }
+    }
+
+    async function loadUserPermissions() {
+      try {
+        const response = await fetch('/api/user-permissions', {
+          credentials: 'include'
+        });
+        const data = await response.json();
+        
+        if (data.success) {
+          userPermissions = data.permissions;
+          console.log('🔒 User permissions loaded:', userPermissions);
+          
+          // Show/hide lead management panel based on permissions
+          const controlPanel = document.querySelector('.control-panel');
+          if (controlPanel) {
+            if (userPermissions.can_start_campaigns) {
+              controlPanel.style.display = 'block';
+            } else {
+              controlPanel.style.display = 'none';
+              console.log('⚠️ Lead management panel hidden - insufficient permissions');
+            }
+          }
+          
+          // Update user role display if needed
+          updateUserRoleDisplay();
+        }
+      } catch (error) {
+        console.error('Error loading user permissions:', error);
+        // Default to hiding the panel if we can\'t load permissions
+        const controlPanel = document.querySelector('.control-panel');
+        if (controlPanel) {
+          controlPanel.style.display = 'none';
+        }
+      }
+    }
+
+    function updateUserRoleDisplay() {
+      // Add role indicator to sidebar if needed
+      const sidebar = document.querySelector('.sidebar');
+      if (sidebar && userPermissions) {
+        let roleIndicator = document.querySelector('.role-indicator');
+        if (!roleIndicator) {
+          roleIndicator = document.createElement('div');
+          roleIndicator.className = 'role-indicator';
+          roleIndicator.style.cssText = `
+            position: absolute;
+            top: 10px;
+            right: 10px;
+            background: ${userPermissions.role === 'admin' ? '#10b981' : '#6b7280'};
+            color: white;
+            padding: 4px 8px;
+            border-radius: 12px;
+            font-size: 0.75rem;
+            font-weight: 500;
+            text-transform: uppercase;
+          `;
+          sidebar.appendChild(roleIndicator);
+        }
+        roleIndicator.textContent = userPermissions.role;
+      }
+    }
+
+    async function startCallingCampaign() {
+      const startBtn = document.getElementById('startCallingBtn');
+      const statusDiv = document.getElementById('callingStatus');
+      const leadLimit = parseInt(document.getElementById('leadLimit').value) || 10;
+      
+      // Disable button and show loading state
+      startBtn.disabled = true;
+      startBtn.innerHTML = '<span class="btn-icon">⏳</span> Starting Campaign...';
+      
+      // Clear previous status
+      statusDiv.className = 'control-status';
+      statusDiv.style.display = 'none';
+      
+      try {
+        const response = await fetch('/api/start-calling', {
+          method: 'POST',
+          headers: {
+            'Content-Type': 'application/json'
+          },
+          credentials: 'include',
+          body: JSON.stringify({ leadLimit })
+        });
+        
+        const data = await response.json();
+        
+        if (data.success) {
+          statusDiv.className = 'control-status success';
+          statusDiv.textContent = `✅ Campaign started! Processing ${data.leadsToCall || leadLimit} leads with max ${data.maxConcurrent || 4} concurrent calls.`;
+          
+          // Start polling for stats updates
+          if (callStatsInterval) clearInterval(callStatsInterval);
+          callStatsInterval = setInterval(loadCallStats, 3000);
+          
+          // Load stats immediately
+          await loadCallStats();
+        } else {
+          statusDiv.className = 'control-status error';
+          statusDiv.textContent = `❌ ${data.message || 'Failed to start campaign'}`;
+        }
+      } catch (error) {
+        console.error('Error starting campaign:', error);
+        statusDiv.className = 'control-status error';
+        statusDiv.textContent = '❌ Network error. Please try again.';
+      } finally {
+        // Re-enable button
+        startBtn.disabled = false;
+        startBtn.innerHTML = '<span class="btn-icon">🚀</span> Start Calling Campaign';
+      }
+    }
+
+    async function setupTestData() {
+      const setupBtn = document.getElementById('setupTestDataBtn');
+      const statusDiv = document.getElementById('testDataStatus');
+      
+      // Disable button and show loading state
+      setupBtn.disabled = true;
+      setupBtn.innerHTML = '<span class="btn-icon">⏳</span> Setting up...';
+      
+      // Clear previous status
+      statusDiv.className = 'control-status';
+      statusDiv.style.display = 'none';
+      
+      try {
+        const response = await fetch('/api/update-test-data', {
+          method: 'POST',
+          headers: {
+            'Content-Type': 'application/json'
+          },
+          credentials: 'include'
+        });
+        
+        const data = await response.json();
+        
+        if (data.success) {
+          statusDiv.className = 'control-status success';
+          const counts = data.statusCounts;
+          const toCallCount = counts.to_call || 0;
+          const notInterestedCount = counts.not_interested || 0;
+          statusDiv.textContent = `✅ Test data ready! ${toCallCount} lead ready to call, ${notInterestedCount} set as not interested. Phone: ${data.testPhoneNumber}`;
+          
+          // Refresh dashboard data
+          await loadData();
+          updateMetrics();
+        } else {
+          statusDiv.className = 'control-status error';
+          statusDiv.textContent = `❌ ${data.error || 'Failed to setup test data'}`;
+        }
+      } catch (error) {
+        console.error('Error setting up test data:', error);
+        statusDiv.className = 'control-status error';
+        statusDiv.textContent = '❌ Network error. Please try again.';
+      } finally {
+        // Re-enable button
+        setupBtn.disabled = false;
+        setupBtn.innerHTML = '<span class="btn-icon">🧪</span> Setup Test Data';
+      }
+    }
+
+    // Initialize lead management when dashboard loads
+    async function initializeLeadManagement() {
+      // Load user permissions first
+      await loadUserPermissions();
+      
+      // Only set up lead management if user has permissions
+      if (userPermissions && userPermissions.can_start_campaigns) {
+        // Set up event listeners
+        const startBtn = document.getElementById('startCallingBtn');
+        if (startBtn) {
+          startBtn.addEventListener('click', startCallingCampaign);
+        }
+        
+        const setupBtn = document.getElementById('setupTestDataBtn');
+        if (setupBtn) {
+          setupBtn.addEventListener('click', setupTestData);
+        }
+        
+        // Load initial stats
+        loadCallStats();
+        
+        // Set up periodic stats updates (every 10 seconds)
+        if (callStatsInterval) clearInterval(callStatsInterval);
+        callStatsInterval = setInterval(loadCallStats, 10000);
+        
+        console.log('✅ Lead management initialized for admin user');
+      } else {
+        console.log('🚫 Lead management disabled for general user');
+      }
+    }
+
     // Initialize dashboard when page loads
     window.addEventListener('load', async () => {
       console.log('🎆 Dashboard loaded, checking authentication...');
@@ -1389,6 +1839,7 @@
       if (isAuthenticated) {
         console.log('🎆 Authentication verified, initializing dashboard...');
         await initializeDashboard();
+        initializeLeadManagement();
         
         // Show the correct page based on URL
         const initialPage = getPageFromUrl();
