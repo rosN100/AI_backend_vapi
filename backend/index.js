@@ -5,6 +5,7 @@ import Joi from 'joi';
 import { google } from 'googleapis';
 import { createClient } from '@supabase/supabase-js';
 import bcrypt from 'bcrypt';
+import cors from 'cors';
 import crypto from 'crypto';
 import path from 'path';
 import { fileURLToPath } from 'url';
@@ -13,7 +14,16 @@ import { fileURLToPath } from 'url';
 const __filename = fileURLToPath(import.meta.url);
 const __dirname = path.dirname(__filename);
 
-dotenv.config();
+// Load environment variables from project root
+const envPath = path.resolve(__dirname, '..', '.env');
+dotenv.config({ path: envPath });
+
+console.log('Environment file loaded from:', envPath);
+console.log('Environment variables:', {
+  NODE_ENV: process.env.NODE_ENV,
+  SUPABASE_URL: process.env.SUPABASE_URL ? 'Set' : 'Not set',
+  PORT: process.env.PORT
+});
 
 const {
   PORT = 3000,
@@ -36,7 +46,43 @@ if (SUPABASE_URL && SUPABASE_SERVICE_ROLE_KEY) {
 }
 
 const app = express();
+
+// Enable CORS for all routes
+app.use(cors({
+  origin: ['http://localhost:3000', 'http://127.0.0.1:3000', 'http://localhost:3001', 'http://127.0.0.1:3001'],
+  credentials: true,
+  methods: ['GET', 'POST', 'PUT', 'DELETE', 'OPTIONS'],
+  allowedHeaders: ['Content-Type', 'Authorization']
+}));
+
+// Add request logging middleware
+app.use((req, res, next) => {
+  console.log(`[${new Date().toISOString()}] ${req.method} ${req.path}`);
+  next();
+});
+
 app.use(express.json());
+app.use(express.static('public'));
+
+// Health check endpoint
+app.get('/health', (req, res) => {
+  res.status(200).json({ status: 'ok', timestamp: new Date().toISOString() });
+});
+
+
+// CORS middleware to allow client requests
+app.use((req, res, next) => {
+  res.header('Access-Control-Allow-Origin', '*');
+  res.header('Access-Control-Allow-Methods', 'GET, POST, PUT, DELETE, OPTIONS');
+  res.header('Access-Control-Allow-Headers', 'Origin, X-Requested-With, Content-Type, Accept, Authorization');
+  res.header('Access-Control-Allow-Credentials', 'true');
+  
+  if (req.method === 'OPTIONS') {
+    res.sendStatus(200);
+  } else {
+    next();
+  }
+});
 
 // Serve static files (CSS, JS, images)
 app.use('/static', express.static(path.join(__dirname, 'static')));
@@ -523,20 +569,35 @@ function generateSessionToken() {
 // Authentication middleware for API endpoints
 function requireAuth(req, res, next) {
   console.log('🔐 requireAuth called for:', req.method, req.path);
+  
+  let token = null;
+  
+  // Check for Bearer token in Authorization header
   const authHeader = req.headers.authorization;
-  if (!authHeader || !authHeader.startsWith('Bearer ')) {
-    console.log('❌ No auth header found');
+  if (authHeader && authHeader.startsWith('Bearer ')) {
+    token = authHeader.substring(7);
+    console.log('🔑 Found Bearer token');
+  }
+  // Check for session token in cookies
+  else if (req.cookies && req.cookies.sessionToken) {
+    token = req.cookies.sessionToken;
+    console.log('🍪 Found session cookie');
+  }
+  
+  if (!token) {
+    console.log('❌ No auth token found (checked header and cookies)');
     return res.status(401).json({ error: 'Authentication required' });
   }
   
-  const token = authHeader.substring(7);
   const session = activeSessions.get(token);
   
   if (!session || session.expiresAt < new Date()) {
     activeSessions.delete(token);
+    console.log('❌ Invalid or expired session for token:', token.substring(0, 8) + '...');
     return res.status(401).json({ error: 'Invalid or expired session' });
   }
   
+  console.log('✅ Authentication successful for user:', session.user.email);
   req.user = session.user;
   next();
 }
@@ -900,16 +961,16 @@ app.post('/api/logout', async (req, res) => {
 // Login page
 // Root endpoint - serve landing page
 app.get('/', (req, res) => {
-  res.sendFile(path.join(__dirname, 'public', 'landing-new.html'));
+  res.sendFile(path.join(__dirname, 'client', 'public', 'landing-new.html'));
 });
 
 app.get('/login', (req, res) => {
-  res.sendFile(path.join(__dirname, 'public', 'login.html'));
+  res.sendFile(path.join(__dirname, 'client', 'public', 'login.html'));
 });
 
 // Protected dashboard route
 app.get('/dashboard', requireWebAuth, (req, res) => {
-  res.sendFile(path.join(__dirname, 'public', 'dashboard-new.html'));
+  res.sendFile(path.join(__dirname, 'client', 'public', 'dashboard-new.html'));
 });
 
 // ------------------------------------------------------------
@@ -928,13 +989,18 @@ app.get('/api/leads', requireAuth, requirePermission('view_analytics'), async (r
   }
 });
 
-// Start automated calling process
+// Start automated calling process for authenticated user
 app.post('/api/start-calling', requireAuth, requirePermission('start_campaigns'), async (req, res) => {
   try {
-    const { leadLimit = 20 } = req.body;
-    console.log(`🚀 Starting automated calling for ${leadLimit} leads`);
+    const { leadLimit = 20, userId = null } = req.body;
     
-    const result = await leadManager.startAutomatedCalling(leadLimit);
+    // If no userId specified, use the authenticated user's ID
+    // Only admins can call for other users
+    const targetUserId = userId && req.user.role === 'admin' ? userId : req.user.id;
+    
+    console.log(`🚀 Starting automated calling for ${leadLimit} leads (user: ${targetUserId})`);
+    
+    const result = await leadManager.startAutomatedCalling(leadLimit, targetUserId);
     
     if (result.error) {
       return res.status(400).json(result);
@@ -943,10 +1009,300 @@ app.post('/api/start-calling', requireAuth, requirePermission('start_campaigns')
     res.json({
       success: true,
       message: 'Automated calling started',
+      userId: targetUserId,
       ...result
     });
   } catch (error) {
     console.error('Error starting automated calling:', error);
+    res.status(500).json({ error: error.message });
+  }
+});
+
+// Simple trigger endpoint (no auth required for testing)
+app.post('/api/trigger-test-call', async (req, res) => {
+  try {
+    console.log('🧪 Simple test call trigger activated');
+    
+    const result = await leadManager.startAutomatedCalling(1);
+    
+    if (result.error) {
+      return res.status(400).json({
+        success: false,
+        message: result.error,
+        details: result
+      });
+    }
+    
+    res.json({
+      success: true,
+      message: 'Test call triggered successfully',
+      details: result
+    });
+  } catch (error) {
+    console.error('Error triggering test call:', error);
+    res.status(500).json({ 
+      success: false,
+      error: error.message,
+      stack: error.stack
+    });
+  }
+});
+
+// Simple n8n-friendly endpoint (no auth required)
+app.post('/api/n8n/trigger-calls/:userId', async (req, res) => {
+  try {
+    const { userId } = req.params;
+    const { 
+      leadLimit = 10,
+      apiKey = null,           // Simple API key for basic auth
+      priority = null,         // Minimum priority level
+      maxConcurrent = 4,       // Max concurrent calls
+      webhookUrl = null,       // Callback URL for completion
+      metadata = {}            // Custom metadata
+    } = req.body;
+    
+    // Simple API key validation (optional)
+    if (process.env.N8N_API_KEY && apiKey !== process.env.N8N_API_KEY) {
+      return res.status(401).json({ 
+        success: false, 
+        error: 'Invalid API key' 
+      });
+    }
+    
+    console.log(`🤖 n8n workflow triggered calling for user: ${userId}`);
+    console.log(`📊 Settings:`, { leadLimit, priority, maxConcurrent, hasWebhook: !!webhookUrl });
+    
+    // Validate user exists
+    const { data: userProfile, error: userError } = await supabase
+      .from('user_profiles')
+      .select('email, full_name, auth_user_id')
+      .eq('auth_user_id', userId)
+      .single();
+    
+    if (userError || !userProfile) {
+      return res.status(404).json({ 
+        success: false,
+        error: 'User not found',
+        userId 
+      });
+    }
+    
+    // Apply configuration
+    if (maxConcurrent) {
+      leadManager.maxConcurrentCalls = Math.min(maxConcurrent, 10);
+    }
+    
+    // Store webhook and metadata for later use
+    if (webhookUrl || Object.keys(metadata).length > 0) {
+      global.userCallConfigs = global.userCallConfigs || new Map();
+      global.userCallConfigs.set(userId, {
+        webhookUrl,
+        metadata,
+        startedAt: new Date().toISOString(),
+        triggeredBy: 'n8n-workflow'
+      });
+    }
+    
+    // Start the calling process
+    const result = await leadManager.startAutomatedCalling(leadLimit, userId);
+    
+    if (result.error) {
+      return res.status(400).json({
+        success: false,
+        error: result.error,
+        userId,
+        userEmail: userProfile.email
+      });
+    }
+    
+    // Success response
+    res.json({
+      success: true,
+      message: `Batch calling started successfully`,
+      userId,
+      userEmail: userProfile.email,
+      userName: userProfile.full_name,
+      configuration: {
+        leadLimit,
+        maxConcurrent: leadManager.maxConcurrentCalls,
+        priority
+      },
+      results: {
+        totalLeads: result.totalLeads,
+        leadsToCall: result.leadsToCall,
+        successfulCalls: result.success,
+        failedCalls: result.failed
+      },
+      metadata,
+      timestamp: new Date().toISOString()
+    });
+    
+  } catch (error) {
+    console.error('Error in n8n trigger endpoint:', error);
+    res.status(500).json({ 
+      success: false,
+      error: error.message,
+      userId: req.params.userId,
+      timestamp: new Date().toISOString()
+    });
+  }
+});
+
+// Enhanced batch calling endpoint for n8n workflows
+app.post('/api/start-user-calling/:userId', requireAuth, requirePermission('start_campaigns'), async (req, res) => {
+  try {
+    const { userId } = req.params;
+    const { 
+      leadLimit = 20,
+      priority = null,           // Filter by priority (e.g., >= 5)
+      maxConcurrent = null,      // Override default concurrent calls
+      leadStatuses = null,       // Specific statuses to include
+      delayBetweenCalls = null,  // Delay in seconds between calls
+      webhookUrl = null,         // Custom webhook for completion
+      metadata = {}              // Additional metadata for tracking
+    } = req.body;
+    
+    // Only admins can trigger calls for other users
+    if (req.user.role !== 'admin' && userId !== req.user.id) {
+      return res.status(403).json({ error: 'Permission denied. Can only start calls for your own leads.' });
+    }
+    
+    // Validate user exists
+    const { data: userProfile, error: userError } = await supabase
+      .from('user_profiles')
+      .select('email, full_name')
+      .eq('auth_user_id', userId)
+      .single();
+    
+    if (userError || !userProfile) {
+      return res.status(404).json({ error: 'User not found' });
+    }
+    
+    console.log(`🚀 Starting batch calling for user ${userId} (${userProfile.email})`);
+    console.log(`📊 Configuration:`, {
+      leadLimit,
+      priority,
+      maxConcurrent,
+      leadStatuses,
+      delayBetweenCalls,
+      hasWebhook: !!webhookUrl,
+      metadata
+    });
+    
+    // Apply configuration overrides if provided
+    if (maxConcurrent) {
+      leadManager.maxConcurrentCalls = Math.min(maxConcurrent, 10); // Cap at 10
+    }
+    
+    const result = await leadManager.startAutomatedCalling(leadLimit, userId);
+    
+    if (result.error) {
+      return res.status(400).json({
+        success: false,
+        error: result.error,
+        userId,
+        userEmail: userProfile.email
+      });
+    }
+    
+    // Store webhook URL and metadata for completion callback
+    if (webhookUrl || Object.keys(metadata).length > 0) {
+      // Store in a simple in-memory map for now
+      // In production, you'd store this in database
+      global.userCallConfigs = global.userCallConfigs || new Map();
+      global.userCallConfigs.set(userId, {
+        webhookUrl,
+        metadata,
+        startedAt: new Date().toISOString(),
+        triggeredBy: req.user.email
+      });
+    }
+    
+    res.json({
+      success: true,
+      message: `Batch calling started for user ${userId}`,
+      userId,
+      userEmail: userProfile.email,
+      configuration: {
+        leadLimit,
+        maxConcurrent: leadManager.maxConcurrentCalls,
+        priority,
+        leadStatuses,
+        delayBetweenCalls
+      },
+      metadata,
+      ...result
+    });
+  } catch (error) {
+    console.error('Error starting user batch calling:', error);
+    res.status(500).json({ 
+      success: false,
+      error: error.message,
+      userId: req.params.userId
+    });
+  }
+});
+
+// Get user's lead statistics
+app.get('/api/user/:userId/lead-stats', requireAuth, async (req, res) => {
+  try {
+    const { userId } = req.params;
+    
+    // Users can only see their own stats, admins can see anyone's
+    if (req.user.role !== 'admin' && userId !== req.user.id) {
+      return res.status(403).json({ error: 'Permission denied' });
+    }
+    
+    const { data, error } = await supabase.rpc('get_user_call_stats', {
+      p_user_id: userId
+    });
+    
+    if (error) {
+      console.error('Error fetching user stats:', error);
+      return res.status(500).json({ error: 'Failed to fetch user statistics' });
+    }
+    
+    res.json({
+      success: true,
+      userId,
+      stats: data
+    });
+  } catch (error) {
+    console.error('Error getting user lead stats:', error);
+    res.status(500).json({ error: error.message });
+  }
+});
+
+// Get all users with their lead counts (admin only)
+app.get('/api/users/lead-summary', requireAuth, requirePermission('view_analytics'), async (req, res) => {
+  try {
+    const { data: users, error } = await supabase
+      .from('user_profiles')
+      .select(`
+        auth_user_id,
+        email,
+        full_name,
+        role,
+        leads:leads(count)
+      `);
+    
+    if (error) {
+      console.error('Error fetching users summary:', error);
+      return res.status(500).json({ error: 'Failed to fetch users summary' });
+    }
+    
+    res.json({
+      success: true,
+      users: users.map(user => ({
+        id: user.auth_user_id,
+        email: user.email,
+        name: user.full_name,
+        role: user.role,
+        leadCount: user.leads[0]?.count || 0
+      }))
+    });
+  } catch (error) {
+    console.error('Error getting users lead summary:', error);
     res.status(500).json({ error: error.message });
   }
 });
@@ -965,11 +1321,15 @@ app.get('/api/call-stats', requireAuth, (req, res) => {
 // Get user permissions
 app.get('/api/user-permissions', requireAuth, async (req, res) => {
   try {
+    console.log('🔑 User permissions requested for:', req.user?.email);
+    
     const { data: profile, error } = await supabase
       .from('user_profiles')
       .select('role, can_manage_leads, can_start_campaigns, can_view_analytics, can_export_data')
       .eq('email', req.user.email)
       .single();
+    
+    console.log('📄 Database query result:', { profile, error: error?.message });
 
     if (error || !profile) {
       // Default to admin for testing if no profile found
@@ -990,95 +1350,7 @@ app.get('/api/user-permissions', requireAuth, async (req, res) => {
   }
 });
 
-// Update test data (for testing purposes only)
-app.post('/api/update-test-data', requireAuth, requirePermission('manage_leads'), async (req, res) => {
-  try {
-    const testPhoneNumber = '+918884154540';
-    
-    console.log('🧪 Setting up test data...');
-    
-    // Update all leads with test phone number
-    const { error: phoneUpdateError } = await supabase
-      .from('leads')
-      .update({ phone_number: testPhoneNumber })
-      .neq('phone_number', null);
-    
-    if (phoneUpdateError) {
-      throw new Error('Failed to update phone numbers: ' + phoneUpdateError.message);
-    }
-    
-    // Set all leads to 'not_interested' first
-    const { error: statusUpdateError } = await supabase
-      .from('leads')
-      .update({ 
-        status: 'not_interested',
-        last_call_result: 'Set for testing - not interested',
-        updated_at: new Date().toISOString()
-      })
-      .neq('status', null);
-    
-    if (statusUpdateError) {
-      throw new Error('Failed to update statuses: ' + statusUpdateError.message);
-    }
-    
-    // Get the first lead to set as 'to_call'
-    const { data: firstLead, error: firstLeadError } = await supabase
-      .from('leads')
-      .select('id')
-      .order('created_at', { ascending: true })
-      .limit(1)
-      .single();
-    
-    if (firstLeadError || !firstLead) {
-      throw new Error('Failed to get first lead: ' + (firstLeadError?.message || 'No leads found'));
-    }
-    
-    // Set first lead to 'to_call' status
-    const { error: firstLeadUpdateError } = await supabase
-      .from('leads')
-      .update({
-        status: 'to_call',
-        follow_up_count: 0,
-        last_call_result: null,
-        callback_scheduled_at: null,
-        last_contacted: null,
-        call_completed_at: null,
-        updated_at: new Date().toISOString()
-      })
-      .eq('id', firstLead.id);
-    
-    if (firstLeadUpdateError) {
-      throw new Error('Failed to update first lead: ' + firstLeadUpdateError.message);
-    }
-    
-    // Get updated counts
-    const { data: statusCounts, error: countError } = await supabase
-      .from('leads')
-      .select('status')
-      .then(result => {
-        if (result.error) return { data: null, error: result.error };
-        const counts = {};
-        result.data.forEach(lead => {
-          counts[lead.status] = (counts[lead.status] || 0) + 1;
-        });
-        return { data: counts, error: null };
-      });
-    
-    console.log('✅ Test data updated successfully');
-    
-    res.json({
-      success: true,
-      message: 'Test data updated successfully',
-      testPhoneNumber: testPhoneNumber,
-      statusCounts: statusCounts || {},
-      firstLeadId: firstLead.id
-    });
-    
-  } catch (error) {
-    console.error('Error updating test data:', error);
-    res.status(500).json({ error: error.message });
-  }
-});
+
 
 // Update lead status manually
 app.put('/api/leads/:leadId/status', requireAuth, requirePermission('manage_leads'), async (req, res) => {
@@ -1248,6 +1520,240 @@ app.post('/post-call-results', async (req, res) => {
   } catch (error) {
     console.error('❌ Error processing call completion:', error);
     res.status(500).json({ status: 'error', message: error.message });
+  }
+});
+
+// Password reset endpoint (for development only)
+app.post('/api/reset-admin-password', async (req, res) => {
+  try {
+    const password = 'admin123';
+    const saltRounds = 10;
+    const passwordHash = await bcrypt.hash(password, saltRounds);
+    
+    console.log('Generated password hash for admin123:', passwordHash);
+    
+    // Update the admin user password
+    const { data, error } = await supabase
+      .from('users')
+      .update({ 
+        password_hash: passwordHash,
+        updated_at: new Date().toISOString()
+      })
+      .eq('email', 'admin@soraaya.ai')
+      .select();
+    
+    if (error) {
+      console.error('Error updating password:', error);
+      return res.status(500).json({ error: error.message });
+    }
+    
+    res.json({ 
+      success: true, 
+      message: 'Password updated successfully',
+      passwordHash: passwordHash,
+      updatedUser: data
+    });
+  } catch (error) {
+    console.error('Error resetting password:', error);
+    res.status(500).json({ error: error.message });
+  }
+});
+
+// Get list of users for filter dropdown
+app.get('/api/admin/users', async (req, res) => {
+  try {
+    console.log('Supabase config:', {
+      url: process.env.SUPABASE_URL,
+      hasKey: !!process.env.SUPABASE_SERVICE_ROLE_KEY
+    });
+    
+    if (!supabase) {
+      console.error('Supabase client not initialized');
+      return res.status(500).json({ 
+        success: false, 
+        error: 'Database connection not configured' 
+      });
+    }
+
+    console.log('Querying users table...');
+    const { data: users, error, status, statusText } = await supabase
+      .from('users')
+      .select('id, email, full_name, status, role')
+      .order('email', { ascending: true });
+    
+    console.log('Query result:', { status, statusText, error, userCount: users?.length });
+    
+    if (error) {
+      console.error('Error fetching users:', error);
+      return res.status(500).json({ 
+        success: false, 
+        error: 'Failed to fetch users',
+        details: error.message 
+      });
+    }
+    
+    // Log all users for debugging
+    console.log('All users:', JSON.stringify(users, null, 2));
+    
+    // Filter active users
+    const activeUsers = users?.filter(user => user.status === 'active') || [];
+    
+    res.json({
+      success: true,
+      users: activeUsers
+    });
+    
+  } catch (error) {
+    console.error('Error in /api/admin/users:', error);
+    res.status(500).json({ 
+      success: false, 
+      error: error.message,
+      stack: process.env.NODE_ENV === 'development' ? error.stack : undefined
+    });
+  }
+});
+
+// Admin stats endpoint
+app.get('/api/admin/stats', async (req, res) => {
+  try {
+    // Get total users count
+    const { data: users, error: usersError } = await supabase
+      .from('users')
+      .select('id', { count: 'exact' })
+      .eq('status', 'active');
+    
+    if (usersError) {
+      console.error('Error fetching users:', usersError);
+    }
+    const totalUsers = users?.length || 0;
+    
+    // Get total leads count
+    const { count: totalLeads, error: leadsError } = await supabase
+      .from('leads')
+      .select('id', { count: 'exact', head: true });
+    
+    if (leadsError) {
+      console.error('Error fetching leads:', leadsError);
+    }
+    
+    // Get today's calls count
+    const today = new Date();
+    today.setHours(0, 0, 0, 0);
+    const tomorrow = new Date(today);
+    tomorrow.setDate(tomorrow.getDate() + 1);
+    
+    const { count: todayCalls, error: callsError } = await supabase
+      .from('leads')
+      .select('id', { count: 'exact', head: true })
+      .gte('created_at', today.toISOString())
+      .lt('created_at', tomorrow.toISOString());
+    
+    if (callsError) {
+      console.error('Error fetching today calls:', callsError);
+    }
+    
+    // Get active calls (calls with status 'calling' or 'in_call')
+    const { count: activeCalls, error: activeError } = await supabase
+      .from('leads')
+      .select('id', { count: 'exact', head: true })
+      .in('status', ['calling', 'in_call']);
+    
+    if (activeError) {
+      console.error('Error fetching active calls:', activeError);
+    }
+    
+    const stats = {
+      totalUsers,
+      totalLeads: totalLeads || 0,
+      activeCalls: activeCalls || 0,
+      todayCalls: todayCalls || 0
+    };
+    
+    console.log('📊 Admin stats:', stats);
+    
+    res.json({
+      success: true,
+      stats: stats,
+      timestamp: new Date().toISOString()
+    });
+    
+  } catch (error) {
+    console.error('Error fetching admin stats:', error);
+    res.status(500).json({ 
+      success: false, 
+      error: error.message,
+      stats: {
+        totalUsers: 0,
+        totalLeads: 0,
+        activeCalls: 0,
+        todayCalls: 0
+      }
+    });
+  }
+});
+
+// Database diagnostic endpoint
+app.get('/api/db-diagnostic', async (req, res) => {
+  try {
+    const diagnostics = {
+      timestamp: new Date().toISOString(),
+      database: 'connected',
+      tables: {}
+    };
+
+    // Check users table
+    try {
+      const { data: users, error: usersError } = await supabase
+        .from('users')
+        .select('email, role, status')
+        .limit(5);
+      
+      diagnostics.tables.users = {
+        exists: !usersError,
+        count: users ? users.length : 0,
+        sample: users || [],
+        error: usersError?.message
+      };
+    } catch (err) {
+      diagnostics.tables.users = { exists: false, error: err.message };
+    }
+
+    // Check leads table
+    try {
+      const { data: leads, error: leadsError } = await supabase
+        .from('leads')
+        .select('id, status')
+        .limit(5);
+      
+      diagnostics.tables.leads = {
+        exists: !leadsError,
+        count: leads ? leads.length : 0,
+        error: leadsError?.message
+      };
+    } catch (err) {
+      diagnostics.tables.leads = { exists: false, error: err.message };
+    }
+
+    // Check user_profiles table
+    try {
+      const { data: profiles, error: profilesError } = await supabase
+        .from('user_profiles')
+        .select('email, role')
+        .limit(5);
+      
+      diagnostics.tables.user_profiles = {
+        exists: !profilesError,
+        count: profiles ? profiles.length : 0,
+        sample: profiles || [],
+        error: profilesError?.message
+      };
+    } catch (err) {
+      diagnostics.tables.user_profiles = { exists: false, error: err.message };
+    }
+
+    res.json(diagnostics);
+  } catch (error) {
+    res.status(500).json({ error: error.message });
   }
 });
 

@@ -429,7 +429,7 @@
       };
       
       try {
-        const response = await fetch('/api/login', {
+        const response = await fetch('http://localhost:3000/api/login', {
           method: 'POST',
           headers: {
             'Content-Type': 'application/json',
@@ -515,7 +515,7 @@
       };
       
       try {
-        const response = await fetch('/api/request-access', {
+        const response = await fetch('http://localhost:3000/api/request-access', {
           method: 'POST',
           headers: {
             'Content-Type': 'application/json',
@@ -556,7 +556,7 @@
       const sessionToken = localStorage.getItem('sessionToken');
       if (sessionToken) {
         // Verify session with server
-        fetch('/api/verify-session', {
+        fetch('http://localhost:3000/api/verify-session', {
           headers: {
             'Authorization': `Bearer ${sessionToken}`
           }

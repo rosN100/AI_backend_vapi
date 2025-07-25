@@ -259,7 +259,7 @@
 
     .charts-grid {
       display: grid;
-      grid-template-columns: repeat(auto-fit, minmax(500px, 1fr));
+      grid-template-columns: 1fr 1fr;
       gap: 24px;
     }
 
@@ -811,6 +811,13 @@
       }
       
       .charts-grid {
+        grid-template-columns: 1fr 1fr;
+        gap: 16px;
+      }
+    }
+    
+    @media (max-width: 480px) {
+      .charts-grid {
         grid-template-columns: 1fr;
       }
       
@@ -944,53 +951,7 @@
       </div>
     </div>
 
-    <!-- Lead Management Control Panel -->
-    <div class="control-panel">
-      <div class="control-header">
-        <h2>📞 Lead Calling Management</h2>
-        <p>Automated lead calling with VAPI integration</p>
-      </div>
-      
-      <div class="control-grid">
-        <div class="control-card">
-          <div class="control-title">Active Calls</div>
-          <div class="control-stats">
-            <div class="stat-item">
-              <span class="stat-label">Currently Active:</span>
-              <span class="stat-value" id="activeCalls">0</span>
-            </div>
-            <div class="stat-item">
-              <span class="stat-label">Queued:</span>
-              <span class="stat-value" id="queuedCalls">0</span>
-            </div>
-            <div class="stat-item">
-              <span class="stat-label">Completed Today:</span>
-              <span class="stat-value" id="completedToday">0</span>
-            </div>
-          </div>
-        </div>
-        
-        <div class="control-card">
-          <div class="control-title">Start Automated Calling</div>
-          <div class="control-form">
-            <div class="form-group">
-              <label for="leadLimit">Number of leads to call:</label>
-              <input type="number" id="leadLimit" value="1" min="1" max="50">
-            </div>
-            <button id="startCallingBtn" class="btn btn-primary">
-              <span class="btn-icon">🚀</span>
-              Start Calling Campaign
-            </button>
-            <button id="setupTestDataBtn" class="btn btn-secondary" style="margin-top: 12px;">
-              <span class="btn-icon">🧪</span>
-              Setup Test Data
-            </button>
-          </div>
-          <div class="control-status" id="callingStatus"></div>
-          <div class="control-status" id="testDataStatus"></div>
-        </div>
-      </div>
-    </div>
+
 
     <!-- Charts Grid -->
     <div class="charts-grid">
@@ -1162,7 +1123,7 @@
       }
       
       try {
-        const response = await fetch('/api/verify-session', {
+        const response = await fetch('http://localhost:3000/api/verify-session', {
           headers: {
             'Authorization': `Bearer ${sessionToken}`
           }
@@ -1218,7 +1179,7 @@
     function logout() {
       const sessionToken = localStorage.getItem('sessionToken');
       if (sessionToken) {
-        fetch('/api/logout', {
+        fetch('http://localhost:3000/api/logout', {
           method: 'POST',
           headers: {
             'Authorization': `Bearer ${sessionToken}`
@@ -1293,7 +1254,7 @@
       
       try {
         const sessionToken = localStorage.getItem('sessionToken');
-        const response = await fetch('/debug-supabase', {
+        const response = await fetch('http://localhost:3000/debug-supabase', {
           headers: {
             'Authorization': `Bearer ${sessionToken}`
           }
@@ -1624,7 +1585,7 @@
 
     async function loadCallStats() {
       try {
-        const response = await fetch('/api/call-stats', {
+        const response = await fetch('http://localhost:3000/api/call-stats', {
           credentials: 'include'
         });
         const data = await response.json();
@@ -1642,7 +1603,7 @@
 
     async function loadUserPermissions() {
       try {
-        const response = await fetch('/api/user-permissions', {
+        const response = await fetch('http://localhost:3000/api/user-permissions', {
           credentials: 'include'
         });
         const data = await response.json();
@@ -1701,134 +1662,7 @@
       }
     }
 
-    async function startCallingCampaign() {
-      const startBtn = document.getElementById('startCallingBtn');
-      const statusDiv = document.getElementById('callingStatus');
-      const leadLimit = parseInt(document.getElementById('leadLimit').value) || 10;
-      
-      // Disable button and show loading state
-      startBtn.disabled = true;
-      startBtn.innerHTML = '<span class="btn-icon">⏳</span> Starting Campaign...';
-      
-      // Clear previous status
-      statusDiv.className = 'control-status';
-      statusDiv.style.display = 'none';
-      
-      try {
-        const response = await fetch('/api/start-calling', {
-          method: 'POST',
-          headers: {
-            'Content-Type': 'application/json'
-          },
-          credentials: 'include',
-          body: JSON.stringify({ leadLimit })
-        });
-        
-        const data = await response.json();
-        
-        if (data.success) {
-          statusDiv.className = 'control-status success';
-          statusDiv.textContent = `✅ Campaign started! Processing ${data.leadsToCall || leadLimit} leads with max ${data.maxConcurrent || 4} concurrent calls.`;
-          
-          // Start polling for stats updates
-          if (callStatsInterval) clearInterval(callStatsInterval);
-          callStatsInterval = setInterval(loadCallStats, 3000);
-          
-          // Load stats immediately
-          await loadCallStats();
-        } else {
-          statusDiv.className = 'control-status error';
-          statusDiv.textContent = `❌ ${data.message || 'Failed to start campaign'}`;
-        }
-      } catch (error) {
-        console.error('Error starting campaign:', error);
-        statusDiv.className = 'control-status error';
-        statusDiv.textContent = '❌ Network error. Please try again.';
-      } finally {
-        // Re-enable button
-        startBtn.disabled = false;
-        startBtn.innerHTML = '<span class="btn-icon">🚀</span> Start Calling Campaign';
-      }
-    }
 
-    async function setupTestData() {
-      const setupBtn = document.getElementById('setupTestDataBtn');
-      const statusDiv = document.getElementById('testDataStatus');
-      
-      // Disable button and show loading state
-      setupBtn.disabled = true;
-      setupBtn.innerHTML = '<span class="btn-icon">⏳</span> Setting up...';
-      
-      // Clear previous status
-      statusDiv.className = 'control-status';
-      statusDiv.style.display = 'none';
-      
-      try {
-        const response = await fetch('/api/update-test-data', {
-          method: 'POST',
-          headers: {
-            'Content-Type': 'application/json'
-          },
-          credentials: 'include'
-        });
-        
-        const data = await response.json();
-        
-        if (data.success) {
-          statusDiv.className = 'control-status success';
-          const counts = data.statusCounts;
-          const toCallCount = counts.to_call || 0;
-          const notInterestedCount = counts.not_interested || 0;
-          statusDiv.textContent = `✅ Test data ready! ${toCallCount} lead ready to call, ${notInterestedCount} set as not interested. Phone: ${data.testPhoneNumber}`;
-          
-          // Refresh dashboard data
-          await loadData();
-          updateMetrics();
-        } else {
-          statusDiv.className = 'control-status error';
-          statusDiv.textContent = `❌ ${data.error || 'Failed to setup test data'}`;
-        }
-      } catch (error) {
-        console.error('Error setting up test data:', error);
-        statusDiv.className = 'control-status error';
-        statusDiv.textContent = '❌ Network error. Please try again.';
-      } finally {
-        // Re-enable button
-        setupBtn.disabled = false;
-        setupBtn.innerHTML = '<span class="btn-icon">🧪</span> Setup Test Data';
-      }
-    }
-
-    // Initialize lead management when dashboard loads
-    async function initializeLeadManagement() {
-      // Load user permissions first
-      await loadUserPermissions();
-      
-      // Only set up lead management if user has permissions
-      if (userPermissions && userPermissions.can_start_campaigns) {
-        // Set up event listeners
-        const startBtn = document.getElementById('startCallingBtn');
-        if (startBtn) {
-          startBtn.addEventListener('click', startCallingCampaign);
-        }
-        
-        const setupBtn = document.getElementById('setupTestDataBtn');
-        if (setupBtn) {
-          setupBtn.addEventListener('click', setupTestData);
-        }
-        
-        // Load initial stats
-        loadCallStats();
-        
-        // Set up periodic stats updates (every 10 seconds)
-        if (callStatsInterval) clearInterval(callStatsInterval);
-        callStatsInterval = setInterval(loadCallStats, 10000);
-        
-        console.log('✅ Lead management initialized for admin user');
-      } else {
-        console.log('🚫 Lead management disabled for general user');
-      }
-    }
 
     // Initialize dashboard when page loads
     window.addEventListener('load', async () => {
@@ -1839,7 +1673,6 @@
       if (isAuthenticated) {
         console.log('🎆 Authentication verified, initializing dashboard...');
         await initializeDashboard();
-        initializeLeadManagement();
         
         // Show the correct page based on URL
         const initialPage = getPageFromUrl();
@@ -1869,7 +1702,7 @@
     // Load data from API
     async function loadData() {
       console.log('📡 Fetching data from API...');
-      const response = await fetch('/debug-supabase');
+      const response = await fetch('http://localhost:3000/debug-supabase');
       const data = await response.json();
       
       const calls = data.recentCalls || [];

@@ -1,271 +1,198 @@
-# Soraaya AI Lead Qualification Dashboard with VAPI Integration
+# 🤖 AI Lead Qualification Platform
 
-A comprehensive lead management and qualification system powered by AI voice calls through VAPI integration. This system now includes automated lead calling, real-time call management, and integrated backend processing that eliminates the need for external N8N workflows.
+A complete multi-user AI-powered lead qualification system with automated outbound calling, real-time analytics, and separate admin/client interfaces.
 
-## Features
-
-### Core Features
-- **AI-Powered Lead Qualification**: Intelligent conversation analysis and lead scoring
-- **Real-time Dashboard**: Comprehensive analytics and lead management interface
-- **Secure Authentication**: User management with session-based authentication
-- **Responsive Design**: Modern, mobile-friendly interface optimized for luxury real estate
-- **Integration Ready**: Seamless integration with VAPI, Supabase, and Google Sheets
-
-### New Lead Management System
-- **🚀 Automated Lead Calling**: Batch process leads with configurable concurrency limits
-- **📞 Real-time Call Management**: Monitor active calls, queue status, and completion rates
-- **🎯 Intelligent Lead Routing**: Automatically prioritize and route leads based on status
-- **🔄 Retry Logic**: Automatic retry for failed calls with exponential backoff
-- **📊 Live Statistics**: Real-time updates on call progress and completion
-- **⚡ Concurrency Control**: Maximum 4 simultaneous calls to prevent API rate limiting
-- **🔗 Direct VAPI Integration**: No external N8N workflow required
-- **📈 Advanced Analytics**: Detailed call metrics and lead qualification tracking
-
-## Project Structure
+## 🏗️ **Architecture Overview**
 
 ```
-├── public/                 # Frontend HTML files
-│   ├── landing-new.html   # Landing page
-│   ├── login.html         # Authentication page
-│   └── dashboard-new.html # Main dashboard
-├── static/                # Static assets (CSS, JS, images)
-├── data/                  # Database schemas and sample data
-│   ├── supabase-schema.sql
-│   ├── user-schema.sql
-│   ├── leads-schema.sql   # NEW: Lead management schema
-│   ├── user-permissions-schema.sql # NEW: User permissions system
-│   └── *.csv files
-├── docs/                  # Documentation
-├── index.js              # Main server file
-├── lead-manager.js       # NEW: Lead management system
-├── riya_system_prompt.js # AI prompt configuration
-└── package.json          # Dependencies
+┌─────────────────────┐    ┌─────────────────────┐    ┌─────────────────────┐
+│   Client Dashboard  │    │  Admin Control Panel│    │   Backend API       │
+│   (Port 3002)       │    │   (Port 3001)       │    │   (Port 3000)       │
+│                     │    │                     │    │                     │
+│ 📊 Clean UI         │    │ 🎛️ Full Control     │    │ 🔌 VAPI Integration │
+│ 📈 Results Only     │    │ 🚀 Campaign Mgmt    │    │ 🗄️ Database         │
+│ 🔐 Client Focused   │    │ 👥 User Management   │    │ 📞 Call Management  │
+└─────────────────────┘    │ 📊 System Stats     │    │ 🔐 Authentication   │
+           │                │ 📝 Logs & Monitoring│    │ 📊 Analytics        │
+           │                │ ⚡ Quick Actions     │    │ 🎯 Business Logic   │
+           └────────────────┴─────────────────────┘    └─────────────────────┘
+                         │                                       │
+                         └───────────────────────────────────────┘
+                                    API Calls
 ```
 
-## Quick Start
+## 🎯 **What This Platform Does**
 
-1. **Install Dependencies**
-   ```bash
-   npm install
-   ```
+### **For End Users (Clients):**
+- 📊 **Clean Dashboard** - View lead qualification results and metrics
+- 📈 **Performance Analytics** - Charts showing campaign success rates
+- 🔍 **Lead Insights** - Detailed qualification results and trends
+- 📱 **Mobile Responsive** - Access from any device
 
-2. **Environment Setup**
-   - Copy `.env.example` to `.env`
-   - Configure your API keys and database credentials
+### **For Administrators:**
+- 🎛️ **Complete Control** - Start/stop campaigns, manage users
+- 👥 **User Management** - View all clients and their leads
+- 📊 **System Monitoring** - Real-time stats, logs, and health checks
+- ⚡ **Quick Actions** - Test calls, emergency stops, diagnostics
 
-3. **Database Setup**
-   - Import schemas from `data/` folder to your Supabase instance
-   - Configure authentication tables
+### **Backend Capabilities:**
+- 🤖 **AI-Powered Calling** - Automated lead qualification via VAPI
+- 🗄️ **Multi-User Database** - Secure data isolation with PostgreSQL
+- 📞 **Campaign Management** - Batch calling with concurrency control
+- 🔐 **Enterprise Security** - Row-level security and authentication
+- 📊 **Real-time Analytics** - Live stats and reporting
+- 🔗 **API Integrations** - n8n workflows and webhook support
 
-4. **Start Server**
-   ```bash
-   node index.js
-   ```
+## 🚀 **Quick Start**
 
-5. **Access Application**
-   - Landing Page: `http://localhost:3000`
-   - Login: `http://localhost:3000/login`
-   - Dashboard: `http://localhost:3000/dashboard`
-
-## Configuration
-
-### Required Environment Variables
-
-```env
-PORT=3000
-VAPI_API_KEY=your_vapi_key
-VAPI_ASSISTANT_ID=your_assistant_id
-VAPI_PHONE_NUMBER_ID=your_phone_id
-SUPABASE_URL=your_supabase_url
-SUPABASE_SERVICE_ROLE_KEY=your_service_key
-GOOGLE_SHEETS_PRIVATE_KEY=your_sheets_key
-GOOGLE_SHEETS_CLIENT_EMAIL=your_client_email
-GOOGLE_SHEETS_SPREADSHEET_ID=your_spreadsheet_id
+### **1. Backend API Setup**
+```bash
+cd backend
+npm install
+# Configure .env file
+npm start  # Runs on port 3000
 ```
 
-## API Endpoints
-
-### Authentication
-- `POST /api/login` - User login
-- `POST /api/logout` - User logout
-- `GET /api/verify-session` - Session verification
-
-### Lead Management (Legacy)
-- `POST /trigger-call` - Initiate VAPI call
-- `POST /post-call-results` - Receive call results webhook
-- `GET /debug-supabase` - Debug database connection
-
-### New Lead Management API
-- `GET /api/leads` - Get leads for calling (with pagination) *[requires: view_analytics]*
-- `POST /api/start-calling` - Start automated calling campaign *[requires: start_campaigns]*
-- `GET /api/call-stats` - Get real-time call statistics
-- `GET /api/user-permissions` - Get current user's permissions
-- `PUT /api/leads/:leadId/status` - Update lead status manually *[requires: manage_leads]*
-
-### Pages
-- `GET /` - Landing page
-- `GET /login` - Login page
-- `GET /dashboard` - Main dashboard (protected)
-
-## Usage Guide
-
-### Setting Up Leads
-
-1. **Database Setup**: First, run the leads schema to create the leads table:
-   ```sql
-   -- Run the SQL from data/leads-schema.sql in your Supabase database
-   ```
-
-2. **Sample Data**: The schema includes sample luxury real estate leads to get started
-
-### Using the Lead Management System
-
-#### Dashboard Overview
-- **Metrics Cards**: View total calls, answer rates, qualified leads, and interventions
-- **Control Panel**: Start automated calling campaigns and monitor progress
-- **Real-time Stats**: Active calls, queued calls, and daily completion counts
-
-#### Starting a Calling Campaign
-
-1. **Access Dashboard**: Navigate to the main dashboard after login
-2. **Lead Management Panel**: Find the "📞 Lead Calling Management" section
-3. **Configure Campaign**:
-   - Set number of leads to call (1-50)
-   - Click "🚀 Start Calling Campaign"
-4. **Monitor Progress**: Watch real-time updates of active and completed calls
-
-#### API Usage Examples
-
-**Start Automated Calling**:
-```javascript
-fetch('/api/start-calling', {
-  method: 'POST',
-  headers: { 'Content-Type': 'application/json' },
-  body: JSON.stringify({ leadLimit: 10 })
-})
+### **2. Admin Panel Setup**
+```bash
+cd admin
+npm install
+npm start  # Runs on port 3001
 ```
 
-**Get Call Statistics**:
-```javascript
-fetch('/api/call-stats')
-  .then(response => response.json())
-  .then(data => console.log(data.stats))
+### **3. Client Dashboard Setup**
+```bash
+cd client
+npm install
+npm start  # Runs on port 3002
 ```
 
-**Update Lead Status**:
-```javascript
-fetch('/api/leads/123/status', {
-  method: 'PUT',
-  headers: { 'Content-Type': 'application/json' },
-  body: JSON.stringify({ 
-    status: 'qualified', 
-    notes: 'Interested in luxury properties' 
-  })
-})
+## 📁 **Project Structure**
+
+```
+AI-Lead-Qualification-Platform/
+├── backend/              # 🔌 Backend API Server
+│   ├── index.js         # Express server & routes
+│   ├── lead-manager.js  # Core business logic
+│   ├── data/           # SQL scripts & migrations
+│   ├── .env            # Environment variables
+│   └── README.md       # Backend documentation
+├── admin/               # 🎛️ Admin Control Panel
+│   ├── index.html      # Admin interface
+│   ├── server.js       # Static server
+│   └── README.md       # Admin documentation
+├── client/              # 📊 Client Dashboard
+│   ├── public/         # Static HTML files
+│   ├── static/         # Assets (CSS, JS, images)
+│   ├── server.js       # Static server
+│   └── README.md       # Client documentation
+└── data/               # 🗄️ Database Scripts
+    ├── add-multi-user-support.sql
+    └── check-lead-status.sql
 ```
 
-### Key Features Explained
+## 🌐 **Deployment Strategy**
 
-#### Concurrency Control
-- Maximum 4 simultaneous calls to prevent VAPI rate limiting
-- Automatic queuing system for additional leads
-- Smart retry logic for failed calls
+### **Railway Deployment (Recommended)**
+Deploy all three services to Railway with custom domains:
 
-#### Lead Status Management
+```bash
+# Backend API
+cd backend && railway new "lead-calling-backend" && railway up
+# → api.yourcompany.com
 
-**📞 Active/Processing Statuses:**
-- **to_call**: Fresh lead, ready for calling (default status)
-- **calling**: Currently being processed (part of active batch)
-- **in_call**: Active call in progress with VAPI
+# Admin Panel  
+cd admin && railway new "lead-calling-admin" && railway up
+# → admin.yourcompany.com
 
-**🔄 Follow-up Statuses:**
-- **follow_up**: Lead couldn't be reached (allows up to 3 attempts)
-- **callback_requested**: Lead specifically requested callback
-
-**✅ Final Resolution Statuses:**
-- **qualified**: Successfully qualified lead (FINAL)
-- **not_interested**: Lead declined/not interested (FINAL)
-- **unresponsive**: No response after 3 follow-up attempts (FINAL)
-
-**⚠️ Human Intervention Statuses:**
-- **human_follow_up**: Requires manual follow-up action
-- **human_input_needed**: Requires human review/intervention
-
-**🔧 Technical Status:**
-- **call_failed**: Technical call failure (will be retried)
-
-**📊 Campaign Flow:**
-```
-[to_call/follow_up/callback_requested/call_failed] 
-                ↓
-        (user starts campaign)
-                ↓
-            calling (batch processing)
-                ↓
-            in_call (active VAPI call)
-                ↓
-    [qualified/not_interested/follow_up/unresponsive/etc.]
+# Client Dashboard
+cd client && railway new "lead-calling-client" && railway up
+# → app.yourcompany.com
 ```
 
-#### User Permission System
+**Total Cost: ~$15/month for all three services**
 
-**Admin Users** have access to:
-- ✅ Dashboard analytics and metrics
-- ✅ Lead management and status updates
-- ✅ Start automated calling campaigns
-- ✅ Export lead data
-- ✅ View all system features
+## 🔧 **Technology Stack**
 
-**General Users** have access to:
-- ✅ Dashboard analytics and metrics
-- ✅ Export lead data
-- ❌ Lead management (view only)
-- ❌ Cannot start calling campaigns
-- ❌ Cannot modify lead statuses
+### **Backend**
+- **Node.js + Express** - API server
+- **Supabase (PostgreSQL)** - Database with RLS
+- **VAPI** - AI voice calling platform
+- **JWT Authentication** - Secure user sessions
 
-**Setting Up Permissions:**
-```sql
--- Run this to promote a user to admin
-SELECT public.promote_user_to_admin('user@example.com');
+### **Frontend**
+- **Vanilla HTML/CSS/JS** - Clean, fast interfaces
+- **Chart.js** - Data visualizations
+- **Responsive Design** - Mobile-first approach
 
--- Or manually update user_profiles table
-UPDATE user_profiles 
-SET role = 'admin', can_manage_leads = true, can_start_campaigns = true 
-WHERE email = 'user@example.com';
+### **Infrastructure**
+- **Railway** - Cloud deployment platform
+- **Custom Domains** - Professional URLs
+- **SSL/HTTPS** - Secure connections
+- **Health Monitoring** - Automatic restarts
+
+## 🔐 **Security Features**
+
+- **Row Level Security (RLS)** - Database-level user isolation
+- **JWT Authentication** - Secure token-based auth
+- **Permission-based Access** - Role-based endpoint protection
+- **CORS Configuration** - Cross-origin request handling
+- **Environment Variables** - Secure configuration management
+- **Admin Access Control** - Separate admin authentication
+
+## 📊 **Key Features**
+
+### **Multi-User Support**
+- Complete data isolation between users
+- User-specific lead management
+- Admin oversight of all users
+- Scalable architecture
+
+### **AI Lead Qualification**
+- Automated outbound calling via VAPI
+- Real-time conversation analysis
+- Lead scoring and qualification
+- Human intervention when needed
+
+### **Campaign Management**
+- Batch calling with concurrency control
+- Campaign priority and metadata
+- Real-time monitoring and control
+- Emergency stop capabilities
+
+### **Analytics & Reporting**
+- Real-time dashboard metrics
+- Lead qualification funnel
+- Success rate tracking
+- Export capabilities
+
+## 🛠️ **Development**
+
+### **Local Development**
+```bash
+# Start all services
+npm run dev:backend   # Port 3000
+npm run dev:admin     # Port 3001  
+npm run dev:client    # Port 3002
 ```
 
-#### Webhook Processing
-- Automatic call completion handling
-- Lead status updates based on call results
-- Transcript and summary storage
-- Qualification scoring integration
+### **Environment Variables**
+Each service requires specific environment variables. See individual README files for details.
 
-## Production Deployment
+## 📚 **Documentation**
 
-1. **Environment Setup**
-   - Ensure all environment variables are configured
-   - Use production database credentials
-   - Enable HTTPS
+- **Backend API**: [backend/README.md](backend/README.md)
+- **Admin Panel**: [admin/README.md](admin/README.md)
+- **Client Dashboard**: [client/README.md](client/README.md)
 
-2. **Security**
-   - Update CORS settings for production domain
-   - Configure proper session management
-   - Enable rate limiting
+## 🚨 **Support**
 
-3. **Monitoring**
-   - Set up logging and error tracking
-   - Configure health checks
-   - Monitor API usage
+For technical support:
+1. Check individual service README files
+2. Review Railway deployment logs
+3. Check API health endpoints
+4. Verify environment variables
 
-## Technology Stack
+---
 
-- **Backend**: Node.js, Express.js
-- **Database**: Supabase (PostgreSQL)
-- **Authentication**: Session-based with Supabase
-- **AI Integration**: VAPI for voice calls
-- **Frontend**: Vanilla HTML/CSS/JavaScript
-- **Data Storage**: Google Sheets integration
-
-## Support
-
-For technical support or questions, please refer to the documentation in the `docs/` folder or contact the development team.
+**🤖 Complete AI Lead Qualification Platform with enterprise-grade security, multi-user support, and professional client/admin interfaces.**

@@ -1,8 +1,18 @@
 import { createClient } from '@supabase/supabase-js';
 import fetch from 'node-fetch';
 import dotenv from 'dotenv';
+import path from 'path';
+import { fileURLToPath } from 'url';
 
-dotenv.config();
+// Get __dirname equivalent for ES modules
+const __filename = fileURLToPath(import.meta.url);
+const __dirname = path.dirname(__filename);
+
+// Load environment variables from project root
+const envPath = path.resolve(__dirname, '..', '.env');
+dotenv.config({ path: envPath });
+
+console.log('Lead Manager: Environment file loaded from:', envPath);
 
 const {
   SUPABASE_URL,
@@ -11,6 +21,11 @@ const {
   VAPI_ASSISTANT_ID,
   VAPI_PHONE_NUMBER_ID
 } = process.env;
+
+if (!SUPABASE_URL || !SUPABASE_SERVICE_ROLE_KEY) {
+  console.error('Error: Missing required Supabase configuration');
+  process.exit(1);
+}
 
 // Initialize Supabase client
 const supabase = createClient(SUPABASE_URL, SUPABASE_SERVICE_ROLE_KEY);
@@ -28,24 +43,32 @@ class LeadManager {
   }
 
   /**
-   * Get leads from Supabase  // Get leads ready for calling - includes to_call, follow_up (≤3), callback_requested, call_failed
+   * Get leads from Supabase for a specific user - includes to_call, follow_up (≤2), callback_requested, call_failed
    */
-  async getLeadsForCalling(limit = 20) {
+  async getLeadsForCalling(limit = 20, userId = null) {
     try {
-      const { data: leads, error } = await supabase
+      let query = supabase
         .from('leads')
         .select('*')
         .or(`status.eq.to_call,status.eq.callback_requested,status.eq.call_failed,and(status.eq.follow_up,follow_up_count.lte.2)`)
         .order('priority', { ascending: false })
         .order('created_at', { ascending: true })
         .limit(limit);
+      
+      // Add user filter if userId is provided
+      if (userId) {
+        query = query.eq('user_id', userId);
+        console.log(`👤 Filtering leads for user: ${userId}`);
+      }
+
+      const { data: leads, error } = await query;
 
       if (error) {
         console.error('Error fetching leads:', error);
         return [];
       }
 
-      console.log(`📋 Found ${leads?.length || 0} leads ready for calling`);
+      console.log(`📋 Found ${leads?.length || 0} leads ready for calling${userId ? ' for user ' + userId : ''}`);
       console.log(`📊 Status breakdown:`, {
         to_call: leads?.filter(l => l.status === 'to_call').length || 0,
         follow_up: leads?.filter(l => l.status === 'follow_up').length || 0,
@@ -533,20 +556,21 @@ class LeadManager {
   }
 
   /**
-   * Start automated calling process
+   * Start automated calling process for a specific user or all users
    */
-  async startAutomatedCalling(leadLimit = 20) {
+  async startAutomatedCalling(leadLimit = 20, userId = null) {
     if (this.isProcessing) {
       console.log('⚠️ Automated calling already in progress');
       return { error: 'Already processing calls' };
     }
 
     this.isProcessing = true;
-    console.log('🚀 Starting automated calling process...');
+    const userInfo = userId ? ` for user ${userId}` : ' (all users)';
+    console.log(`🚀 Starting automated calling process${userInfo}...`);
 
     try {
-      // Get leads ready for calling
-      const leads = await this.getLeadsForCalling(leadLimit);
+      // Get leads ready for calling (filtered by user if specified)
+      const leads = await this.getLeadsForCalling(leadLimit, userId);
       
       if (leads.length === 0) {
         console.log('📝 No leads available for calling');
