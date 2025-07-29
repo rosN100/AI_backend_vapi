@@ -6,7 +6,7 @@ const __filename = fileURLToPath(import.meta.url);
 const __dirname = path.dirname(__filename);
 
 const app = express();
-const PORT = process.env.CLIENT_PORT || 3002;
+const PORT = process.env.CLIENT_PORT || 3001;
 
 // Serve static files from public directory
 app.use(express.static(path.join(__dirname, 'public')));
@@ -36,9 +36,8 @@ app.get('/health', (req, res) => {
 // Start server
 app.listen(PORT, () => {
   console.log(`📊 Client Dashboard running on http://localhost:${PORT}`);
-  console.log(`🔗 Main API server should be running on http://localhost:3000`);
-  console.log(`🎛️ Admin panel available at http://localhost:3001`);
-  console.log(`🌐 Client access: http://localhost:${PORT}`);
+  console.log(`🔗 Backend API server: http://localhost:3000`);
+  console.log(`🌐 Access dashboard at: http://localhost:${PORT}`);
 });
 
 export default app;

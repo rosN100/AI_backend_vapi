@@ -540,14 +540,54 @@
       color: #166534;
     }
 
-    .status-unqualified {
+    .status-not_interested {
       background: #fef2f2;
       color: #dc2626;
     }
 
-    .status-needs_review {
+    .status-to_call {
+      background: #e0f2fe;
+      color: #0277bd;
+    }
+
+    .status-calling {
+      background: #fff3e0;
+      color: #f57c00;
+    }
+
+    .status-in_call {
+      background: #f3e5f5;
+      color: #7b1fa2;
+    }
+
+    .status-follow_up {
       background: #fef3c7;
       color: #d97706;
+    }
+
+    .status-callback_requested {
+      background: #e8f5e8;
+      color: #2e7d32;
+    }
+
+    .status-unresponsive {
+      background: #f5f5f5;
+      color: #616161;
+    }
+
+    .status-human_input_needed {
+      background: #ffebee;
+      color: #c62828;
+    }
+
+    .status-human_follow_up {
+      background: #fef3c7;
+      color: #d97706;
+    }
+
+    .status-call_failed {
+      background: #ffebee;
+      color: #d32f2f;
     }
 
     .qualification-reason {
@@ -916,20 +956,20 @@
     <div class="metrics-grid">
       <div class="metric-card">
         <div class="metric-header">
-          <div class="metric-title">Total Calls Attempted</div>
-          <div class="metric-icon metric-calls">📞</div>
+          <div class="metric-title">Total Leads</div>
+          <div class="metric-icon metric-calls">📋</div>
         </div>
         <div class="metric-value" id="totalCalls">-</div>
-        <div class="metric-subtitle">All outbound calls initiated</div>
+        <div class="metric-subtitle">All leads in database</div>
       </div>
 
       <div class="metric-card">
         <div class="metric-header">
-          <div class="metric-title">Calls Answered</div>
+          <div class="metric-title">Leads Contacted</div>
           <div class="metric-icon metric-answered">✅</div>
         </div>
-        <div class="metric-value" id="callsAnswered">-</div>
-        <div class="metric-subtitle" id="answeredRate">-</div>
+        <div class="metric-value" id="leadsContacted">-</div>
+        <div class="metric-subtitle" id="contactedRate">Qualified or closed leads</div>
       </div>
 
       <div class="metric-card">
@@ -947,7 +987,7 @@
           <div class="metric-icon metric-interventions">👤</div>
         </div>
         <div class="metric-value" id="humanInterventions">-</div>
-        <div class="metric-subtitle">Calls requiring human assistance</div>
+        <div class="metric-subtitle">Leads requiring human assistance</div>
       </div>
     </div>
 
@@ -1037,9 +1077,16 @@
               <div class="filter-dropdown">
                 <select id="statusFilter" class="filter-select">
                   <option value="all">All Statuses</option>
+                  <option value="to_call">To Call</option>
+                  <option value="calling">Calling</option>
                   <option value="qualified">Qualified</option>
-                  <option value="unqualified">Disqualified</option>
-                  <option value="needs_review">Needs Attention</option>
+                  <option value="not_interested">Not Interested</option>
+                  <option value="follow_up">Follow Up</option>
+                  <option value="callback_requested">Callback Requested</option>
+                  <option value="unresponsive">Unresponsive</option>
+                  <option value="human_input_needed">Human Input Needed</option>
+                  <option value="human_follow_up">Needs Review</option>
+                  <option value="call_failed">Call Failed</option>
                 </select>
               </div>
               <div class="filter-dropdown">
@@ -1254,9 +1301,11 @@
       
       try {
         const sessionToken = localStorage.getItem('sessionToken');
-        const response = await fetch('http://localhost:3000/debug-supabase', {
+        const response = await fetch('http://localhost:3000/api/leads?all=true', {
+          method: 'GET',
           headers: {
-            'Authorization': `Bearer ${sessionToken}`
+            'Authorization': `Bearer ${sessionToken}`,
+            'Content-Type': 'application/json'
           }
         });
         
@@ -1265,7 +1314,10 @@
         }
         
         const data = await response.json();
-        allLeads = data.recentCalls || [];
+        if (!data.success) {
+          throw new Error(data.error || 'Failed to load leads');
+        }
+        allLeads = data.leads || [];
         console.log('📊 Loaded leads data:', allLeads.length, 'leads');
         console.log('📊 Sample lead:', allLeads[0]);
         
@@ -1324,14 +1376,25 @@
     }
 
     function getLeadStatus(lead) {
-      // Map sentiment to lead status since lead_status field doesn't exist in current data
-      if (lead.sentiment === 'very_positive' || lead.sentiment === 'positive') {
-        return 'qualified';
-      }
-      if (lead.sentiment === 'interested' || lead.sentiment === 'cautious') {
-        return 'needs_review';
-      }
-      return 'unqualified';
+      // Use the actual status from the database
+      return lead.status || 'to_call';
+    }
+
+    function getStatusDisplayText(status) {
+      const statusMap = {
+        'to_call': 'To Call',
+        'calling': 'Calling',
+        'in_call': 'In Call',
+        'qualified': 'Qualified',
+        'not_interested': 'Not Interested',
+        'follow_up': 'Follow Up',
+        'callback_requested': 'Callback Requested',
+        'unresponsive': 'Unresponsive',
+        'human_input_needed': 'Human Input Needed',
+        'human_follow_up': 'Needs Review',
+        'call_failed': 'Call Failed'
+      };
+      return statusMap[status] || status;
     }
 
     function renderLeadsTable() {
@@ -1357,8 +1420,7 @@
         console.log(`📋 Processing lead ${index + 1}:`, lead.contact_person);
         const status = getLeadStatus(lead);
         const statusClass = `status-${status.replace('_', '_')}`;
-        const statusText = status === 'needs_review' ? 'Needs Attention' : 
-                          status === 'qualified' ? 'Qualified' : 'Disqualified';
+        const statusText = getStatusDisplayText(status);
         
         const qualificationReason = getQualificationReason(lead);
         const formattedDate = new Date(lead.created_at).toLocaleDateString();
@@ -1691,7 +1753,7 @@
       try {
         await loadData();
         updateMetrics();
-        initializeCharts();
+        await initializeCharts();
         console.log('✅ Dashboard loaded successfully!');
       } catch (error) {
         console.error('❌ Dashboard initialization failed:', error);
@@ -1702,22 +1764,32 @@
     // Load data from API
     async function loadData() {
       console.log('📡 Fetching data from API...');
-      const response = await fetch('http://localhost:3000/debug-supabase');
+      const sessionToken = localStorage.getItem('sessionToken');
+      const response = await fetch('http://localhost:3000/api/leads?all=true', {
+        headers: {
+          'Authorization': `Bearer ${sessionToken}`,
+          'Content-Type': 'application/json'
+        }
+      });
       const data = await response.json();
       
-      const calls = data.recentCalls || [];
-      console.log(`📞 Processing ${calls.length} calls`);
+      if (!data.success) {
+        throw new Error(data.error || 'Failed to load data');
+      }
       
-      // Calculate metrics
+      const leads = data.leads || [];
+      console.log(`📋 Processing ${leads.length} leads`);
+      
+      // Calculate metrics based on lead data
       dashboardData = {
-        totalCalls: calls.length,
-        callsAnswered: calls.filter(call => call.status === 'completed').length,
-        leadsQualified: calls.filter(call => call.lead_status === 'qualified').length,
-        humanInterventions: calls.filter(call => 
-          call.ended_reason === 'human-input-needed' || 
-          call.lead_status === 'needs_review'
+        totalCalls: leads.length,
+        callsAnswered: leads.filter(lead => lead.status === 'qualified' || lead.status === 'not_interested').length,
+        leadsQualified: leads.filter(lead => lead.status === 'qualified').length,
+        humanInterventions: leads.filter(lead => 
+          lead.status === 'human_input_needed' || 
+          lead.status === 'human_follow_up'
         ).length,
-        calls: calls
+        calls: leads
       };
 
       console.log('📈 Calculated metrics:', dashboardData);
@@ -1728,7 +1800,9 @@
       const { totalCalls, callsAnswered, leadsQualified, humanInterventions } = dashboardData;
       
       document.getElementById('totalCalls').textContent = totalCalls;
-      document.getElementById('callsAnswered').textContent = callsAnswered;
+      // Update the leads contacted element (check if ID exists)
+      const leadsContactedEl = document.getElementById('leadsContacted') || document.getElementById('callsAnswered');
+      if (leadsContactedEl) leadsContactedEl.textContent = callsAnswered;
       document.getElementById('leadsQualified').textContent = leadsQualified;
       document.getElementById('humanInterventions').textContent = humanInterventions;
       
@@ -1736,18 +1810,19 @@
       const answerRate = totalCalls > 0 ? ((callsAnswered / totalCalls) * 100).toFixed(1) : 0;
       const qualificationRate = totalCalls > 0 ? ((leadsQualified / totalCalls) * 100).toFixed(1) : 0;
       
-      document.getElementById('answeredRate').textContent = `${answerRate}% answer rate`;
+      const contactedRateEl = document.getElementById('contactedRate') || document.getElementById('answeredRate');
+      if (contactedRateEl) contactedRateEl.textContent = `${answerRate}% contacted`;
       document.getElementById('qualifiedRate').textContent = `${qualificationRate}% of total calls`;
     }
 
     // Initialize all charts
-    function initializeCharts() {
+    async function initializeCharts() {
       console.log('📊 Creating charts...');
       
       createQualificationGauge();
       createFunnelChart();
-      createCallTimesChart();
-      createSourceChart();
+      await createCallTimesChart();
+      await createSourceChart();
     }
 
     // 1. Qualification Success Rate Gauge
@@ -1825,86 +1900,227 @@
       });
     }
 
-    // 3. Best Call Times
-    function createCallTimesChart() {
+    // 3. Best Call Times (Dynamic)
+    async function createCallTimesChart() {
       const ctx = document.getElementById('callTimesChart');
       
-      // Mock data for call times (you can replace with real data)
-      const timeSlots = ['9 AM', '10 AM', '11 AM', '12 PM', '1 PM', '2 PM', '3 PM', '4 PM', '5 PM'];
-      const answerRates = [65, 72, 85, 78, 45, 68, 82, 71, 58];
-      
-      charts.callTimes = new Chart(ctx, {
-        type: 'bar',
-        data: {
-          labels: timeSlots,
-          datasets: [{
-            label: 'Answer Rate (%)',
-            data: answerRates,
-            backgroundColor: answerRates.map(rate => 
-              rate >= 80 ? '#10b981' : rate >= 60 ? '#f59e0b' : '#ef4444'
-            ),
-            borderRadius: 6,
-            borderSkipped: false
-          }]
-        },
-        options: {
-          responsive: true,
-          maintainAspectRatio: false,
-          plugins: {
-            legend: { display: false }
+      try {
+        const response = await fetch('http://localhost:3000/api/analytics/call-times', {
+          headers: {
+            'Authorization': `Bearer ${localStorage.getItem('sessionToken')}`
+          }
+        });
+        
+        if (!response.ok) {
+          throw new Error('Failed to fetch call timing data');
+        }
+        
+        const result = await response.json();
+        const data = result.data || [];
+        
+        // Format data for chart
+        const timeSlots = data.map(d => {
+          const hour = d.call_hour;
+          if (hour === 12) return '12 PM';
+          if (hour > 12) return `${hour - 12} PM`;
+          return `${hour} AM`;
+        });
+        
+        const answerRates = data.map(d => d.answer_rate || 0);
+        
+        charts.callTimes = new Chart(ctx, {
+          type: 'bar',
+          data: {
+            labels: timeSlots,
+            datasets: [{
+              label: 'Answer Rate (%)',
+              data: answerRates,
+              backgroundColor: answerRates.map(rate => 
+                rate >= 80 ? '#10b981' : rate >= 60 ? '#f59e0b' : '#ef4444'
+              ),
+              borderRadius: 6,
+              borderSkipped: false
+            }]
           },
-          scales: {
-            y: { 
-              beginAtZero: true,
-              max: 100,
-              title: { display: true, text: 'Answer Rate (%)' }
+          options: {
+            responsive: true,
+            maintainAspectRatio: false,
+            plugins: {
+              legend: { display: false },
+              tooltip: {
+                callbacks: {
+                  afterLabel: function(context) {
+                    const index = context.dataIndex;
+                    const callData = data[index];
+                    return [
+                      `Total Calls: ${callData.total_calls}`,
+                      `Answered: ${callData.answered_calls}`,
+                      `Qualified: ${callData.qualified_leads}`
+                    ];
+                  }
+                }
+              }
+            },
+            scales: {
+              y: { 
+                beginAtZero: true,
+                max: 100,
+                title: { display: true, text: 'Answer Rate (%)' }
+              }
             }
           }
-        }
-      });
+        });
+      } catch (error) {
+        console.error('Error creating call times chart:', error);
+        // Fallback to empty chart
+        charts.callTimes = new Chart(ctx, {
+          type: 'bar',
+          data: {
+            labels: ['9 AM', '10 AM', '11 AM', '12 PM', '1 PM', '2 PM', '3 PM', '4 PM', '5 PM'],
+            datasets: [{
+              label: 'Answer Rate (%)',
+              data: [0, 0, 0, 0, 0, 0, 0, 0, 0],
+              backgroundColor: '#e5e7eb',
+              borderRadius: 6,
+              borderSkipped: false
+            }]
+          },
+          options: {
+            responsive: true,
+            maintainAspectRatio: false,
+            plugins: {
+              legend: { display: false }
+            },
+            scales: {
+              y: { 
+                beginAtZero: true,
+                max: 100,
+                title: { display: true, text: 'Answer Rate (%)' }
+              }
+            }
+          }
+        });
+      }
     }
 
-    // 4. Lead Source Performance
-    function createSourceChart() {
+    // 4. Lead Source Performance (Dynamic)
+    async function createSourceChart() {
       const ctx = document.getElementById('sourceChart');
       
-      // Mock data for lead sources (you can replace with real data)
-      charts.source = new Chart(ctx, {
-        type: 'bar',
-        data: {
-          labels: ['Website', 'Social Media', 'Referrals', 'Cold Calls'],
-          datasets: [
-            {
-              label: 'Qualified',
-              data: [45, 32, 28, 15],
-              backgroundColor: '#10b981',
-              borderRadius: 6,
-              borderSkipped: false
-            },
-            {
-              label: 'Unqualified',
-              data: [55, 68, 42, 35],
-              backgroundColor: '#ef4444',
-              borderRadius: 6,
-              borderSkipped: false
-            }
-          ]
-        },
-        options: {
-          responsive: true,
-          maintainAspectRatio: false,
-          scales: {
-            x: { stacked: true },
-            y: { 
-              stacked: true,
-              title: { display: true, text: 'Number of Leads' }
-            }
-          },
-          plugins: {
-            legend: { position: 'bottom' }
+      try {
+        const response = await fetch('http://localhost:3000/api/analytics/lead-sources', {
+          headers: {
+            'Authorization': `Bearer ${localStorage.getItem('sessionToken')}`
           }
+        });
+        
+        if (!response.ok) {
+          throw new Error('Failed to fetch lead source data');
         }
-      });
+        
+        const result = await response.json();
+        const data = result.data || [];
+        
+        // Format data for chart
+        const labels = data.map(d => {
+          const source = d.source || 'unknown';
+          return source.split('_').map(word => 
+            word.charAt(0).toUpperCase() + word.slice(1)
+          ).join(' ');
+        });
+        
+        const qualifiedData = data.map(d => d.qualified_leads || 0);
+        const unqualifiedData = data.map(d => (d.total_leads || 0) - (d.qualified_leads || 0));
+        
+        charts.source = new Chart(ctx, {
+          type: 'bar',
+          data: {
+            labels: labels,
+            datasets: [
+              {
+                label: 'Qualified',
+                data: qualifiedData,
+                backgroundColor: '#10b981',
+                borderRadius: 6,
+                borderSkipped: false
+              },
+              {
+                label: 'Unqualified',
+                data: unqualifiedData,
+                backgroundColor: '#ef4444',
+                borderRadius: 6,
+                borderSkipped: false
+              }
+            ]
+          },
+          options: {
+            responsive: true,
+            maintainAspectRatio: false,
+            scales: {
+              x: { stacked: true },
+              y: { 
+                stacked: true,
+                title: { display: true, text: 'Number of Leads' }
+              }
+            },
+            plugins: {
+              legend: { position: 'bottom' },
+              tooltip: {
+                callbacks: {
+                  afterLabel: function(context) {
+                    const index = context.dataIndex;
+                    const sourceData = data[index];
+                    return [
+                      `Total Leads: ${sourceData.total_leads}`,
+                      `Qualification Rate: ${sourceData.qualification_rate}%`,
+                      `Answer Rate: ${sourceData.answer_rate}%`
+                    ];
+                  }
+                }
+              }
+            }
+          }
+        });
+      } catch (error) {
+        console.error('Error creating source chart:', error);
+        // Fallback to empty chart
+        charts.source = new Chart(ctx, {
+          type: 'bar',
+          data: {
+            labels: ['Website', 'Social Media', 'Referrals', 'Cold Calls'],
+            datasets: [
+              {
+                label: 'Qualified',
+                data: [0, 0, 0, 0],
+                backgroundColor: '#10b981',
+                borderRadius: 6,
+                borderSkipped: false
+              },
+              {
+                label: 'Unqualified',
+                data: [0, 0, 0, 0],
+                backgroundColor: '#ef4444',
+                borderRadius: 6,
+                borderSkipped: false
+              }
+            ]
+          },
+          options: {
+            responsive: true,
+            maintainAspectRatio: false,
+            scales: {
+              x: { stacked: true },
+              y: { 
+                stacked: true,
+                title: { display: true, text: 'Number of Leads' }
+              }
+            },
+            plugins: {
+              legend: { position: 'bottom' }
+            }
+          }
+        });
+      }
     }
 
     // Error handling

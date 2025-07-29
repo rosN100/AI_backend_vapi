@@ -18,13 +18,6 @@ const __dirname = path.dirname(__filename);
 const envPath = path.resolve(__dirname, '..', '.env');
 dotenv.config({ path: envPath });
 
-console.log('Environment file loaded from:', envPath);
-console.log('Environment variables:', {
-  NODE_ENV: process.env.NODE_ENV,
-  SUPABASE_URL: process.env.SUPABASE_URL ? 'Set' : 'Not set',
-  PORT: process.env.PORT
-});
-
 const {
   PORT = 3000,
   VAPI_API_KEY,
@@ -47,41 +40,17 @@ if (SUPABASE_URL && SUPABASE_SERVICE_ROLE_KEY) {
 
 const app = express();
 
-// Enable CORS for all routes
+// Middleware
 app.use(cors({
   origin: ['http://localhost:3000', 'http://127.0.0.1:3000', 'http://localhost:3001', 'http://127.0.0.1:3001'],
-  credentials: true,
-  methods: ['GET', 'POST', 'PUT', 'DELETE', 'OPTIONS'],
-  allowedHeaders: ['Content-Type', 'Authorization']
+  credentials: true
 }));
-
-// Add request logging middleware
-app.use((req, res, next) => {
-  console.log(`[${new Date().toISOString()}] ${req.method} ${req.path}`);
-  next();
-});
-
 app.use(express.json());
 app.use(express.static('public'));
 
 // Health check endpoint
 app.get('/health', (req, res) => {
-  res.status(200).json({ status: 'ok', timestamp: new Date().toISOString() });
-});
-
-
-// CORS middleware to allow client requests
-app.use((req, res, next) => {
-  res.header('Access-Control-Allow-Origin', '*');
-  res.header('Access-Control-Allow-Methods', 'GET, POST, PUT, DELETE, OPTIONS');
-  res.header('Access-Control-Allow-Headers', 'Origin, X-Requested-With, Content-Type, Accept, Authorization');
-  res.header('Access-Control-Allow-Credentials', 'true');
-  
-  if (req.method === 'OPTIONS') {
-    res.sendStatus(200);
-  } else {
-    next();
-  }
+  res.json({ status: 'ok', timestamp: new Date().toISOString() });
 });
 
 // Serve static files (CSS, JS, images)
@@ -186,36 +155,18 @@ function validateConfiguration() {
     }
   }
 
-  // Check optional Google Sheets configuration
-  const hasGoogleSheetsKey = GOOGLE_SHEETS_PRIVATE_KEY && !GOOGLE_SHEETS_PRIVATE_KEY.includes('your_');
-  const hasGoogleSheetsEmail = GOOGLE_SHEETS_CLIENT_EMAIL && !GOOGLE_SHEETS_CLIENT_EMAIL.includes('your_');
+  // Check integrations
+  const hasGoogleSheets = GOOGLE_SHEETS_PRIVATE_KEY && GOOGLE_SHEETS_CLIENT_EMAIL && 
+    !GOOGLE_SHEETS_PRIVATE_KEY.includes('your_') && !GOOGLE_SHEETS_CLIENT_EMAIL.includes('your_');
   
-  if (hasGoogleSheetsKey && hasGoogleSheetsEmail) {
-    console.log('✅ Google Sheets integration enabled');
-  } else if (hasGoogleSheetsKey || hasGoogleSheetsEmail) {
-    console.warn('⚠️ Partial Google Sheets configuration detected. Both GOOGLE_SHEETS_PRIVATE_KEY and GOOGLE_SHEETS_CLIENT_EMAIL are required.');
-  } else {
-    console.log('ℹ️ Google Sheets integration disabled (credentials not provided)');
-  }
-
-  // Check optional Supabase configuration
-  const hasSupabaseUrl = SUPABASE_URL && !SUPABASE_URL.includes('your_');
-  const hasSupabaseKey = SUPABASE_SERVICE_ROLE_KEY && !SUPABASE_SERVICE_ROLE_KEY.includes('your_');
-  
-  if (hasSupabaseUrl && hasSupabaseKey) {
-    console.log('✅ Supabase integration enabled');
-  } else if (hasSupabaseUrl || hasSupabaseKey) {
-    console.warn('⚠️ Partial Supabase configuration detected. Both SUPABASE_URL and SUPABASE_SERVICE_ROLE_KEY are required.');
-  } else {
-    console.log('ℹ️ Supabase integration disabled (credentials not provided)');
-  }
+  const hasSupabase = SUPABASE_URL && SUPABASE_SERVICE_ROLE_KEY && 
+    !SUPABASE_URL.includes('your_') && !SUPABASE_SERVICE_ROLE_KEY.includes('your_');
 
   if (errors.length) {
     console.error('Configuration Error(s):');
     errors.forEach(e => console.error(` - ${e}`));
     process.exit(1);
   }
-  console.log('✅ Core configuration validation passed!');
 }
 
 // ------------------------------------------------------------
@@ -225,11 +176,7 @@ import { RIYA_SYSTEM_PROMPT, RIYA_INITIAL_GREETING, TODAYS_DATE } from './riya_s
 import leadManager from './lead-manager.js';
 
 async function createVapiCall(propertyData) {
-  console.log('Today\'s date for VAPI:', TODAYS_DATE);
-  
-  // Format and log phone number
   const formattedPhone = formatPhoneNumber(propertyData.phone_number);
-  console.log(`Phone number formatting: ${propertyData.phone_number} -> ${formattedPhone}`);
   
   const callConfig = {
     assistantId: VAPI_ASSISTANT_ID,
@@ -284,14 +231,7 @@ async function createVapiCall(propertyData) {
 }
 
 async function triggerVapiCall(propertyData) {
-  console.log('📞 Creating VAPI call for property:', propertyData.property_name);
-  console.log('📱 Calling:', propertyData.contact_person, 'at', propertyData.phone_number);
-  
   const vapiCall = await createVapiCall(propertyData);
-  console.log('✅ VAPI call initiated:', vapiCall.id);
-
-  console.log('🎉 Outbound phone call initiated via VAPI!');
-  console.log(`📋 VAPI Call ID: ${vapiCall.id}`);
   return { 
     callId: vapiCall.id, 
     status: vapiCall.status,
@@ -568,38 +508,54 @@ function generateSessionToken() {
 
 // Authentication middleware for API endpoints
 function requireAuth(req, res, next) {
-  console.log('🔐 requireAuth called for:', req.method, req.path);
-  
+  const authHeader = req.headers.authorization;
   let token = null;
   
-  // Check for Bearer token in Authorization header
-  const authHeader = req.headers.authorization;
   if (authHeader && authHeader.startsWith('Bearer ')) {
     token = authHeader.substring(7);
-    console.log('🔑 Found Bearer token');
-  }
-  // Check for session token in cookies
-  else if (req.cookies && req.cookies.sessionToken) {
-    token = req.cookies.sessionToken;
-    console.log('🍪 Found session cookie');
+  } else if (req.cookies && req.cookies.session) {
+    token = req.cookies.session;
   }
   
   if (!token) {
-    console.log('❌ No auth token found (checked header and cookies)');
     return res.status(401).json({ error: 'Authentication required' });
   }
   
-  const session = activeSessions.get(token);
-  
-  if (!session || session.expiresAt < new Date()) {
-    activeSessions.delete(token);
-    console.log('❌ Invalid or expired session for token:', token.substring(0, 8) + '...');
-    return res.status(401).json({ error: 'Invalid or expired session' });
-  }
-  
-  console.log('✅ Authentication successful for user:', session.user.email);
-  req.user = session.user;
-  next();
+  // Check session in database
+  supabase
+    .from('user_sessions')
+    .select('user_id, expires_at')
+    .eq('session_token', token)
+    .single()
+    .then(async ({ data: session, error }) => {
+      if (error || !session) {
+        return res.status(401).json({ error: 'Invalid or expired session' });
+      }
+      
+      // Check if session is expired
+      if (new Date(session.expires_at) < new Date()) {
+        return res.status(401).json({ error: 'Session expired' });
+      }
+      
+      // Get user details
+      const { data: user, error: userError } = await supabase
+        .from('users')
+        .select('id, email, full_name, role, status')
+        .eq('id', session.user_id)
+        .eq('status', 'active')
+        .single();
+      
+      if (userError || !user) {
+        return res.status(401).json({ error: 'User not found' });
+      }
+      
+      req.user = user;
+      next();
+    })
+    .catch(err => {
+      console.error('Auth error:', err);
+      res.status(500).json({ error: 'Authentication error' });
+    });
 }
 
 // Authentication middleware for web pages (redirects to login)
@@ -980,8 +936,28 @@ app.get('/dashboard', requireWebAuth, (req, res) => {
 // Get leads for calling
 app.get('/api/leads', requireAuth, requirePermission('view_analytics'), async (req, res) => {
   try {
-    const limit = parseInt(req.query.limit) || 50;
-    const leads = await leadManager.getLeadsForCalling(limit);
+    const limit = parseInt(req.query.limit) || 100;
+    const includeAll = req.query.all === 'true';
+    
+    let leads;
+    if (includeAll) {
+      // Get ALL leads for dashboard display
+      const { data, error } = await supabase
+        .from('leads')
+        .select('*')
+        .order('priority', { ascending: false })
+        .order('created_at', { ascending: false })
+        .limit(limit);
+      
+      if (error) {
+        throw new Error(error.message);
+      }
+      leads = data || [];
+    } else {
+      // Get only leads ready for calling
+      leads = await leadManager.getLeadsForCalling(limit);
+    }
+    
     res.json({ success: true, leads, count: leads.length });
   } catch (error) {
     console.error('Error fetching leads:', error);
@@ -1376,6 +1352,105 @@ app.put('/api/leads/:leadId/status', requireAuth, requirePermission('manage_lead
 });
 
 // ------------------------------------------------------------
+// Analytics endpoints
+// ------------------------------------------------------------
+
+// Get call timing analytics
+app.get('/api/analytics/call-times', requireAuth, requirePermission('view_analytics'), async (req, res) => {
+  try {
+    const { data, error } = await supabase
+      .from('call_timing_analytics')
+      .select('*')
+      .order('call_hour');
+    
+    if (error) throw error;
+    
+    // Fill in missing hours with 0 data
+    const fullDayData = [];
+    for (let hour = 9; hour <= 21; hour++) { // 9 AM to 9 PM
+      const existingData = data.find(d => d.call_hour === hour);
+      if (existingData) {
+        fullDayData.push(existingData);
+      } else {
+        fullDayData.push({
+          call_hour: hour,
+          total_calls: 0,
+          answered_calls: 0,
+          answer_rate: 0,
+          qualified_leads: 0,
+          qualification_rate: 0
+        });
+      }
+    }
+    
+    res.json({ success: true, data: fullDayData });
+  } catch (error) {
+    console.error('Error getting call timing analytics:', error);
+    res.status(500).json({ error: error.message });
+  }
+});
+
+// Get lead source analytics
+app.get('/api/analytics/lead-sources', requireAuth, requirePermission('view_analytics'), async (req, res) => {
+  try {
+    const { data, error } = await supabase
+      .from('lead_source_analytics')
+      .select('*')
+      .order('total_leads', { ascending: false });
+    
+    if (error) throw error;
+    
+    res.json({ success: true, data });
+  } catch (error) {
+    console.error('Error getting lead source analytics:', error);
+    res.status(500).json({ error: error.message });
+  }
+});
+
+// Record call analytics (called from webhook)
+app.post('/api/analytics/record-call', requireAuth, async (req, res) => {
+  try {
+    const {
+      call_id,
+      lead_id,
+      call_started_at,
+      call_ended_at,
+      call_duration_seconds,
+      call_status,
+      lead_outcome,
+      answer_time_seconds,
+      talk_time_seconds,
+      phone_number,
+      lead_source
+    } = req.body;
+    
+    const { data, error } = await supabase
+      .from('call_analytics')
+      .insert({
+        call_id,
+        lead_id,
+        call_started_at,
+        call_ended_at,
+        call_duration_seconds,
+        call_status,
+        lead_outcome,
+        answer_time_seconds,
+        talk_time_seconds,
+        phone_number,
+        lead_source
+      })
+      .select();
+    
+    if (error) throw error;
+    
+    res.json({ success: true, data: data[0] });
+  } catch (error) {
+    console.error('Error recording call analytics:', error);
+    res.status(500).json({ error: error.message });
+  }
+});
+
+// ------------------------------------------------------------
 // Additional routes
 // ------------------------------------------------------------
 
@@ -1482,13 +1557,9 @@ app.post('/trigger-call', async (req, res) => {
   try {
     const callResult = await triggerVapiCall(req.body);
     
-    // Store property data for later use when call ends
     if (callResult && callResult.id) {
       callPropertyData.set(callResult.id, req.body);
-      console.log(`Stored property data for call ${callResult.id}`);
     }
-    
-    console.log('Call triggered successfully:', callResult);
     res.json({ success: true, callId: callResult.id, message: 'Call initiated successfully' });
   } catch (err) {
     console.error(err);
@@ -1497,8 +1568,6 @@ app.post('/trigger-call', async (req, res) => {
 });
 
 app.post('/post-call-results', async (req, res) => {
-  console.log('--- /post-call-results endpoint HIT ---');
-  console.log('Raw webhook payload:', JSON.stringify(req.body, null, 2));
   
   const { error } = resultsSchema.validate(req.body);
   if (error) {
@@ -1511,10 +1580,8 @@ app.post('/post-call-results', async (req, res) => {
     const success = await leadManager.handleCallCompletion(req.body);
     
     if (success) {
-      console.log('✅ Call completion processed successfully');
       res.json({ status: 'received', success: true });
     } else {
-      console.log('⚠️ Call completion processing failed');
       res.status(400).json({ status: 'error', message: 'Failed to process call completion' });
     }
   } catch (error) {
@@ -1523,174 +1590,11 @@ app.post('/post-call-results', async (req, res) => {
   }
 });
 
-// Password reset endpoint (for development only)
-app.post('/api/reset-admin-password', async (req, res) => {
-  try {
-    const password = 'admin123';
-    const saltRounds = 10;
-    const passwordHash = await bcrypt.hash(password, saltRounds);
-    
-    console.log('Generated password hash for admin123:', passwordHash);
-    
-    // Update the admin user password
-    const { data, error } = await supabase
-      .from('users')
-      .update({ 
-        password_hash: passwordHash,
-        updated_at: new Date().toISOString()
-      })
-      .eq('email', 'admin@soraaya.ai')
-      .select();
-    
-    if (error) {
-      console.error('Error updating password:', error);
-      return res.status(500).json({ error: error.message });
-    }
-    
-    res.json({ 
-      success: true, 
-      message: 'Password updated successfully',
-      passwordHash: passwordHash,
-      updatedUser: data
-    });
-  } catch (error) {
-    console.error('Error resetting password:', error);
-    res.status(500).json({ error: error.message });
-  }
-});
 
-// Get list of users for filter dropdown
-app.get('/api/admin/users', async (req, res) => {
-  try {
-    console.log('Supabase config:', {
-      url: process.env.SUPABASE_URL,
-      hasKey: !!process.env.SUPABASE_SERVICE_ROLE_KEY
-    });
-    
-    if (!supabase) {
-      console.error('Supabase client not initialized');
-      return res.status(500).json({ 
-        success: false, 
-        error: 'Database connection not configured' 
-      });
-    }
 
-    console.log('Querying users table...');
-    const { data: users, error, status, statusText } = await supabase
-      .from('users')
-      .select('id, email, full_name, status, role')
-      .order('email', { ascending: true });
-    
-    console.log('Query result:', { status, statusText, error, userCount: users?.length });
-    
-    if (error) {
-      console.error('Error fetching users:', error);
-      return res.status(500).json({ 
-        success: false, 
-        error: 'Failed to fetch users',
-        details: error.message 
-      });
-    }
-    
-    // Log all users for debugging
-    console.log('All users:', JSON.stringify(users, null, 2));
-    
-    // Filter active users
-    const activeUsers = users?.filter(user => user.status === 'active') || [];
-    
-    res.json({
-      success: true,
-      users: activeUsers
-    });
-    
-  } catch (error) {
-    console.error('Error in /api/admin/users:', error);
-    res.status(500).json({ 
-      success: false, 
-      error: error.message,
-      stack: process.env.NODE_ENV === 'development' ? error.stack : undefined
-    });
-  }
-});
 
-// Admin stats endpoint
-app.get('/api/admin/stats', async (req, res) => {
-  try {
-    // Get total users count
-    const { data: users, error: usersError } = await supabase
-      .from('users')
-      .select('id', { count: 'exact' })
-      .eq('status', 'active');
-    
-    if (usersError) {
-      console.error('Error fetching users:', usersError);
-    }
-    const totalUsers = users?.length || 0;
-    
-    // Get total leads count
-    const { count: totalLeads, error: leadsError } = await supabase
-      .from('leads')
-      .select('id', { count: 'exact', head: true });
-    
-    if (leadsError) {
-      console.error('Error fetching leads:', leadsError);
-    }
-    
-    // Get today's calls count
-    const today = new Date();
-    today.setHours(0, 0, 0, 0);
-    const tomorrow = new Date(today);
-    tomorrow.setDate(tomorrow.getDate() + 1);
-    
-    const { count: todayCalls, error: callsError } = await supabase
-      .from('leads')
-      .select('id', { count: 'exact', head: true })
-      .gte('created_at', today.toISOString())
-      .lt('created_at', tomorrow.toISOString());
-    
-    if (callsError) {
-      console.error('Error fetching today calls:', callsError);
-    }
-    
-    // Get active calls (calls with status 'calling' or 'in_call')
-    const { count: activeCalls, error: activeError } = await supabase
-      .from('leads')
-      .select('id', { count: 'exact', head: true })
-      .in('status', ['calling', 'in_call']);
-    
-    if (activeError) {
-      console.error('Error fetching active calls:', activeError);
-    }
-    
-    const stats = {
-      totalUsers,
-      totalLeads: totalLeads || 0,
-      activeCalls: activeCalls || 0,
-      todayCalls: todayCalls || 0
-    };
-    
-    console.log('📊 Admin stats:', stats);
-    
-    res.json({
-      success: true,
-      stats: stats,
-      timestamp: new Date().toISOString()
-    });
-    
-  } catch (error) {
-    console.error('Error fetching admin stats:', error);
-    res.status(500).json({ 
-      success: false, 
-      error: error.message,
-      stats: {
-        totalUsers: 0,
-        totalLeads: 0,
-        activeCalls: 0,
-        todayCalls: 0
-      }
-    });
-  }
-});
+
+
 
 // Database diagnostic endpoint
 app.get('/api/db-diagnostic', async (req, res) => {

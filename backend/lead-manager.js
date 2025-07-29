@@ -12,8 +12,6 @@ const __dirname = path.dirname(__filename);
 const envPath = path.resolve(__dirname, '..', '.env');
 dotenv.config({ path: envPath });
 
-console.log('Lead Manager: Environment file loaded from:', envPath);
-
 const {
   SUPABASE_URL,
   SUPABASE_SERVICE_ROLE_KEY,
